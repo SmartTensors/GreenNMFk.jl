@@ -1,26 +1,23 @@
-function [Solution, VectIndex, Cent, reconstr, mean_savg, number_of_clust_sim] = clustering_the_solutions(number_of_sources,nd,sol,normF, Qyes)
+function [Solution, VectIndex, Cent, reconstr, mean_savg, number_of_clust_sim] = clustering_the_solutionsBSAF(number_of_sources,nd,sol,normF)
                                                                                 
 
 %K     = number_of_sources;
-%normF = sqrt(normF./100)*100;
-
-
-
+normF = sqrt(normF./100)*100;
+    
     minsil_old = -2;
-    
-    if Qyes == 1
-        steps      = 10;
-        quants     = quantile(normF, linspace(0.2, 0.01, steps)); %This use to be linspace(0.2, 0.01, steps)     %start with 20% the data 
-    else
-        steps = 1;
-        quants = max(normF);
-    end
-    
+    steps      = 10;
+    quants     = quantile(normF, linspace(0.2, 0.01, steps)); %start with half the data
 %% Calculating the silhuettes in the different quantiles 
- 
-for p= 1:steps %steps
-       disp(p);
-       ind  = find(normF <= quants(p));
+  u_index   = find(quants<0.1)
+  u_element = max(quants(u_index));
+  u = find(quants ==u_element);
+  ind  = find(normF < quants(u));
+  sol1 = sol(ind,:);
+  
+if size(sol1,1) => 5 
+for u= 10:steps
+       
+       ind  = find(normF < quants(u));
        sol1 = sol(ind,:);
     %xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     %xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -67,28 +64,10 @@ for p= 1:steps %steps
     savg   = grpstats(ss,VectIndex);
     minsil = savg;%min(savg);
     
-    if mean(minsil) < minsil_old/2
-        break
-    end
     
-    if size(ind,1) < 5
-        break
-    end
-    
-    if min(minsil) > 0.95
-        break
-    end
-    
-    minsil_old = mean(minsil);
-
-
 end
 
-number_of_clust_sim = p;
-
-
-
-
+number_of_clust_sim = u;
 
 idx1     = VectIndex==1;
 avg_sol  = mean(sol1(VectIndex(idx1),:));

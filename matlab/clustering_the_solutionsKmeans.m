@@ -1,4 +1,4 @@
-function [Solution, VectIndex, Cent, reconstr, mean_savg, number_of_clust_sim] = clustering_the_solutions(number_of_sources,nd,sol,normF, Qyes)
+function [Solution, VectIndex, Cent, reconstr, mean_savg, number_of_clust_sim] = clustering_the_solutionsKmeans(number_of_sources,nd,sol,normF, Qyes)
                                                                                 
 
 %K     = number_of_sources;
@@ -60,7 +60,8 @@ for p= 1:steps %steps
 
 
 
-    [~, VectIndex, Cent ] =  LudmilCluster( Sources3D, colSources, 100);
+    %[~, VectIndex, Cent ] =  LudmilCluster( Sources3D, colSources, 100);
+    [VectIndex, Cent] = kmeans(colSources, number_of_sources);
      
    
     [ss,h] = silhouette(colSources,VectIndex);
