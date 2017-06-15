@@ -44,6 +44,7 @@ Xs = ones(length(As), 3);
 for k = 1:size(Xs,1)
  Xs(k,:) = [As(k) Xn(1,k) Xn(2,k)];
 end
+
 %  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 % xd -> the positions of the detectors
 xd1 =  [0.0  0.0]; % position of the first detector
@@ -63,6 +64,7 @@ xd9 =  [0.5   0.0];
 %xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 xD = [xd1;xd2;xd3;xd4; xd5;xd6;xd7;xd8; xd9];
+
 %xD = [xd1; xd2; xd3; xd4; xd5];
 % The number of detectors
 nd = length(xD);

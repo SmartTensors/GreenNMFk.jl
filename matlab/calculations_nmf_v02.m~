@@ -28,13 +28,8 @@ function [sol,normF,lb,ub, AA,sol_real, normF_real, normF1, sol_all, normF_abs, 
 				fun2 = @(x) ([ zeros(1, (i-1)*numT) Mixfn(x)  zeros(1, (nd-i)*numT)]- S(i,:));
 				funF = @(x) funF(x) + fun2(x);
 		end
-    end
+	end
 
-    disp("SIZES OF MATRIX")
-    disp(size(S(i,:)))
-    disp(size(zeros(1, (i-1)*numT)))
-    return
-    
 	 % Defining the lower and upper boundary for the minimization
 	lb = [0   0     0];  % lower boundary [Ux Dx Dy]
 	ub = [1   1     1];  % upper boundary [Ux Dx Dy]
@@ -75,9 +70,9 @@ function [sol,normF,lb,ub, AA,sol_real, normF_real, normF1, sol_all, normF_abs, 
         end
 
         disp("Solution:")
-        disp(sol)
+        %disp(sol)
         disp("normF:")
-        disp(normF)
+        %disp(normF)
         return
         
 		normF_abs = normF;

@@ -18,7 +18,14 @@ for  d = 1:nd % loop on detectors
                    Mix = Mix + source(time, Xs(i,:), xD(d,:), D, t0, u);
                 end
           end
-          S(d,:) = [zeros(1, (d-1)*numT)  Mix  zeros(1, (nd-d)*numT)] ;   
+          disp("======================================================")
+          disp(size(zeros(1, (d-1)*numT)))
+          disp(size(Mix))
+          disp(size(zeros(1, (nd-d)*numT)))
+          disp("S:")
+          S(d,:) = [zeros(1, (d-1)*numT)  Mix  zeros(1, (nd-d)*numT)] ;
+          disp(size(S))
+          disp("======================================================")
     end
 end
 
