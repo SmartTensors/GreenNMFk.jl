@@ -28,10 +28,10 @@
 #	XF	  - Observation matrix condensed to long vector
 
 function initial_conditions(As,Xs,xD,D,t0,u,numT,noise,time)
-	
+
 	nd = size(xD,1) # The number of the detectors
-	S  = zeros(nd, nd * numT) # The observation matrix S with unknown # of sources
-	
+	S  = Array{Float64}(nd, nd * numT) # The observation matrix S with unknown # of sources
+
 	GreenNMFk.log("\nInitial conditions set:")
 	GreenNMFk.log("-----------------------------------------")
 	GreenNMFk.log("  Sources amplitude (As)     = $(As)")
@@ -42,13 +42,13 @@ function initial_conditions(As,Xs,xD,D,t0,u,numT,noise,time)
 	GreenNMFk.log("  Flow speed (u)             = $(u) km/year")
 	GreenNMFk.log("  Noise (noise)              = $(noise)")
 	GreenNMFk.log("  Number of detectors (nd)   = $(nd)")
-	
+
 	GreenNMFk.log("\nCalculating initial conditions...")
 	GreenNMFk.log("-----------------------------------------")
-	
+
 	# Iterate through number of detectors
 	for d=1:nd
-		if (length(As) == 1) 
+		if (length(As) == 1)
 			Mix = GreenNMFk.source(time, Xs[1,:], xD[d,:], D, t0, u) + noise * randn(size(time))
 			S[d, :] = [zeros(1, (d - 1) * numT) Mix zeros(1, (nd - d) * numT)]
 		else
@@ -59,27 +59,27 @@ function initial_conditions(As,Xs,xD,D,t0,u,numT,noise,time)
 					Mix = Mix + GreenNMFk.source(time, Xs[i,:], xD[d,:], D, t0, u)
 				end
 			end
-			
+
 			# Generate row in S
 			# [0, 0...0    0,0...0   Mix'  0,0...0    0,0...0]
 			S[d, :] = [zeros(1, (d-1)*numT)  Mix'  zeros(1, (nd-d)*numT)]
 			GreenNMFk.log("  Filling column $(d) of $(nd) in observation matrix")
 		end
 	end
-	
+
 	GreenNMFk.log("\n  S dimensions: $(size(S))")
-	
+
 	# Condense S' and Xs' matrices into single vector
 	XF = reshape(S', 1, size(S,2) * nd) # Long vector of length nd * numT
 	xtrue = reshape(Xs', 1, size(Xs, 2) * size(Xs, 1))
-	
+
 	# Save a JLD file with initial condition variables
 	if save_output
 		outfile = "x_true_$(nd)det_$(length(As))sources.jld"
-		
+
 		GreenNMFk.log("\n  -> Saving results to $(working_dir)/$(outfile)")
 		JLD.save(joinpath(working_dir, outfile), "XF", XF, "xtrue", xtrue, "S", S, "xD", xD, "D", D, "u", u)
 	end
-	
+
 	return S, XF
 end
