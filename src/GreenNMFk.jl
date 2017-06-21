@@ -1,6 +1,7 @@
 # Module file for Green-NMFk
 module GreenNMFk
 
+import NMFk
 import Gadfly # Plotting library
 import JLD # Used for file IO
 import Base # Used for system paths

@@ -1,4 +1,20 @@
-function clustering_the_solutions(number_of_sources, nd, sol, normF, Qyes)
+#=
+	Name: clustering_the_solutions
+	Purpose: 
+
+	Inputs:
+		(Int) Number of sources
+		(Int) Number of detectors
+		(Array{T,2}) NMF solution matrix
+		(Array{T,1}) NMF normF vector
+		(Float) Qyes
+
+	Outputs:
+		Null
+
+=#
+function clustering_the_solutions(number_of_sources::Number, nd::Number, sol::Matrix, normF::Vector, Qyes::Number)
+	
 	minsil_old = -2
 	
 	# Determine the number of quantiles
@@ -11,9 +27,7 @@ function clustering_the_solutions(number_of_sources, nd, sol, normF, Qyes)
 	end
 	
 	# Calculation of silhouettes in different quantiles
-	for p = 1:steps
-		println("Run $(p) of $(steps)")
-		
+	for p = 1:steps	
 		ind = find(normF[normF .<= quants[p]])
 		sol1 = sol[ind,:]
 		
@@ -50,7 +64,8 @@ function clustering_the_solutions(number_of_sources, nd, sol, normF, Qyes)
 		end
 		
 		_, vect_index, cent = ludmil_cluster(sources_3D, col_sources, 100)
-		ss = Clustering.silhouettes(col_sources, vect_index)
+		idx, centroids = NMFk.clustersolutions(col_sources, true)
+		#ss = Clustering.silhouettes(col_sources, vect_index)
 		savg = grpstats(ss, vect_index)
 		minsil = savg
 		

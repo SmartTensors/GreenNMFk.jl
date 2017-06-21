@@ -27,7 +27,7 @@
 #	S	  - Observation matrix
 #	XF	  - Observation matrix condensed to long vector
 
-function initial_conditions(As,Xs,xD,D,t0,u,numT,noise,time)
+function initial_conditions(As::Vector, Xs::Matrix, xD::Matrix, D::Matrix, t0::Number, u::Number, numT::Number, noise::Number, time::Vector)
 
 	nd = size(xD,1) # The number of the detectors
 	S  = Array{Float64}(nd, nd * numT) # The observation matrix S with unknown # of sources
