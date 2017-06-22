@@ -49,14 +49,15 @@ function initial_conditions(As::Vector, Xs::Matrix, xD::Matrix, D::Matrix, t0::N
 	# Iterate through number of detectors
 	for d=1:nd
 		if (length(As) == 1)
-			Mix = GreenNMFk.source(time, Xs[1,:], xD[d,:], D, t0, u) + noise * randn(size(time))
+			(t::Vector, fs::Vector, xs::Matrix, xd::Matrix, Dx::Number, Dy::Number, t0::Number, u::Number)
+			Mix = GreenNMFk.source(time, Xs[1], Xs[1,2:3], xD[d,:], D[1], D[2], t0, u) + noise * randn(size(time))
 			S[d, :] = [zeros(1, (d - 1) * numT) Mix zeros(1, (nd - d) * numT)]
 		else
 			for i=1:length(As)
 				if (i == 1)
-					Mix = GreenNMFk.source(time, Xs[i,:], xD[d,:], D, t0, u) + noise * randn(size(time))
+					Mix = GreenNMFk.source(time, Xs[i], Xs[i,2:3], xD[d,:], D[1], D[2], t0, u) + noise * randn(size(time))
 				else
-					Mix = Mix + GreenNMFk.source(time, Xs[i,:], xD[d,:], D, t0, u)
+					Mix = Mix + GreenNMFk.source(time, Xs[i], Xs[i,2:3], xD[d,:], D[1], D[2], t0, u)
 				end
 			end
 
