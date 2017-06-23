@@ -63,7 +63,7 @@ function clustering_the_solutions(number_of_sources::Number, nd::Number, sol::Ma
 			end
 		end
 		
-		_, vect_index, cent = ludmil_cluster(sources_3D, col_sources, 100)
+		# _, vect_index, cent = ludmil_cluster(sources_3D, col_sources, 100)
 		idx, centroids = NMFk.clustersolutions(col_sources, true)
 		#ss = Clustering.silhouettes(col_sources, vect_index)
 		savg = grpstats(ss, vect_index)

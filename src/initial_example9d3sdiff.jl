@@ -8,7 +8,7 @@ tic()
 max_number_of_sources = 9	# Number of sources
 Nsim = 100 					# Number of simulations
 numT = 80					# Number of time points
-time = linspace(0, 20, numT)
+time = collect(linspace(0, 20, numT))
 
 # Initialize equation parameters
 u = 0.05 # (km/yr) - flow speed
@@ -40,6 +40,7 @@ xD[8,:] = [-0.5  0.0]
 xD[9,:] = [0.5   0.0]
 
 nd = size(xD, 1)
+
 
 S, XF = GreenNMFk.initial_conditions(As,Xs,xD,D,t0,u,numT,noise,time)
 

@@ -28,24 +28,22 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 	# funF = ∑ᵢ(MixFn[i]- ∑ⱼ(Sources[i,j]))²
 	GreenNMFk.log("  Define the function to be minimized")
 
-	# Create empty array for which each new function iteration will be appended
-	# The idea is to avoid an infinite recursion, i.e.:
-	# a = x->2x, b = x->x^2
-	# a = x->a(x)+b(x) != x->2x+x^2, instead it tries to call itself
-
-	function funF(x...)
-		@show collect(x)
+	function nl_func(a...)
+		x = collect(a)
 		min_sum = 0
 		fun_sum = 0
 		for i=1:nd
 			if number_of_sources == 1
-				min_sum += source(time, x[4:6], xD[i,:], x[1:2], t0, x[3]) # replace with true variable names
+				#min_sum += source(time, x[4], x[4:6], xD[i,:], x[1], x[2], t0, x[3]) 
+				min_sum += source(time, x[4], x[5:6], xD[i,:], x[1], x[2], t0, x[3]) # replace with true variable names
 			else
 				for d=1:number_of_sources
 					if (d == 1)
-						min_sum += source(time, x[4:6], xD[i,:], x[1:2], t0, x[3]) # replace with true variable names
+						min_sum += source(time, x[4], x[5:6], xD[i,:], x[1], x[2], t0, x[3])
+						#min_sum += source(time, x[4:6], xD[i,:], x[1:2], t0, x[3]) # replace with true variable names
 					else
-						min_sum += source(time, x[d*3+1:d*3+3], xD[i,:], x[1:2], t0, x[3]) # replace with true variable names
+						min_sum += source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3])
+						#min_sum += source(time, x[d*3+1:d*3+3], xD[i,:], x[1:2], t0, x[3]) # replace with true variable names
 					end
 				end
 			end
@@ -60,6 +58,9 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 	end
 
 	GreenNMFk.log("  Calculating simulation parameters")
+	
+	nvar = 3 + number_of_sources * 3
+	println("  Number of variables: $(nvar)")
 
 	# Defining the lower and upper boundary for the minimization
 	lb = [0 0 0] # replace with true variable names
@@ -94,7 +95,7 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 	GreenNMFk.log("  Running NMF calculations")
 	while ((real_num < cutNum) && (j_all < 10 * Nsim))
 		#options = optimset("MaxFunEvals", 3000) # Set maximum times to evaluate function at 3000
-		initCON = zeros(Nsim, 3 * number_of_sources + 3)
+		initCON = Array{Float64}(Nsim, 3 * number_of_sources + 3)
 
 		GreenNMFk.log("  -> Calculating initial conditions")
 		for k = 1:Nsim
@@ -107,29 +108,51 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 
 			initCON[k,:] = x_init
 		end
-
-		# Iterates the NMF runs
-		#TODO: implement parallel
-		#parfor k = 1:Nsim
-		GreenNMFk.log("  -> Calculating the non-linear least squares fit")
-
-		model_NMF = JuMP.Model(solver=Ipopt.IpoptSolver())
-		# @JuMP.variable(model_NMF, lb[i] <= x[i=1:6] <= ub[i], start=0.5)
-		@JuMP.variable(model_NMF, lb[i] <= x[i=1:6] <=ub[i], start=0.5)
-		JuMP.register(model_NMF, :funF, 6, funF, autodiff=true)
-		ix = JuMP.getvalue(x)
-		@show funF(ix[1], ix[2], ix[3], ix[4], ix[5], ix[6])
-
-		@eval @JuMP.NLobjective(m, Min, $(Expr(:call, :funF, [Expr(:ref, :x, i) for i=1:6]...)))
-
-		status = JuMP.solve(model_NMF)
-		println("x = ", JuMP.getvalue(x))
-
-		GreenNMFk.log(status)
-
+		
+		Nsim = 1
+		# Run solver once for every number of simulations
 		for k = 1:Nsim
-			println(initCON[k,:])
-#			sol[k,:], normF[k] = lsqnonlin(funF,initCON[k,:],lb,ub,options)
+			
+			local solutions
+			result = 0 # For try/catch: 0 if failure, 1 for success
+			max_iters = 2000 # Maximum # of iterations for solver - decreases on failure
+			
+			# Try/catch NL solver
+			nl_solver(iters) = try
+				model_NMF = JuMP.Model(solver=Ipopt.IpoptSolver(print_level=1, max_iter=iters))
+		
+		    	JuMP.register(model_NMF, :nl_func, nvar, nl_func, autodiff=true)
+		    	@JuMP.variable(model_NMF, lb[i] <= x[i=1:nvar] <= ub[i], start=initCON[k,i])
+		    	JuMP.setNLobjective(model_NMF, :Min, Expr(:call, :nl_func, [x[i] for i=1:nvar]...))
+		
+		    	JuMP.solve(model_NMF)
+				
+				result = 1
+		    	return [JuMP.getvalue(x[i]) for i=1:nvar]
+			catch y
+				if isa(y, DomainError)
+					result = 0
+					return 0
+				end
+			end
+		
+			# While solver fails...
+			while result == 0
+				println("Trying with $(max_iters) iterations")
+				solutions = nl_solver(max_iters)
+				max_iters = max_iters - 250
+				
+				if max_iters < 500
+					println("Iterations too small: stopping")
+					exit(1)
+				end
+			end
+			
+			# If solver was successful
+			if result == 1
+				sol[k,:] = solutions
+				println("Run $(k) solutions: $(sol[k,:])")
+			end
 		end
 
 		normF_abs = normF
