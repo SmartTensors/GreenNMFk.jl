@@ -32,24 +32,20 @@ function initial_conditions(As::Vector, Xs::Matrix, xD::Matrix, D::Matrix, t0::N
 	nd = size(xD,1) # The number of the detectors
 	S  = Array{Float64}(nd, nd * numT) # The observation matrix S with unknown # of sources
 
-	GreenNMFk.log("\nInitial conditions set:")
-	GreenNMFk.log("-----------------------------------------")
-	GreenNMFk.log("  Sources amplitude (As)     = $(As)")
-	GreenNMFk.log("  Sources matrix length (Xs) = $(length(Xs))")
-	GreenNMFk.log("  Detector positions (xD)    = $(xD)")
-	GreenNMFk.log("  Diffusion coeff. (D)       = $(D) km²/year")
-	GreenNMFk.log("  Initial time (t0)          = $(t0)")
-	GreenNMFk.log("  Flow speed (u)             = $(u) km/year")
-	GreenNMFk.log("  Noise (noise)              = $(noise)")
-	GreenNMFk.log("  Number of detectors (nd)   = $(nd)")
-
-	GreenNMFk.log("\nCalculating initial conditions...")
-	GreenNMFk.log("-----------------------------------------")
+	GreenNMFk.log("\nCalculating initial conditions...",1,-1)
+	GreenNMFk.log("\nEnvironment input:",2,0)
+	GreenNMFk.log("  Sources amplitude (As)     = $(As)",1)
+	GreenNMFk.log("  Sources matrix length (Xs) = $(length(Xs))",1)
+	GreenNMFk.log("  Detector positions (xD)    = $(xD)",1)
+	GreenNMFk.log("  Diffusion coeff. (D)       = $(D) km²/year",1)
+	GreenNMFk.log("  Initial time (t0)          = $(t0)",1)
+	GreenNMFk.log("  Flow speed (u)             = $(u) km/year",1)
+	GreenNMFk.log("  Noise (noise)              = $(noise)",1)
+	GreenNMFk.log("  Number of detectors (nd)   = $(nd)",1)
 
 	# Iterate through number of detectors
 	for d=1:nd
 		if (length(As) == 1)
-			(t::Vector, fs::Vector, xs::Matrix, xd::Matrix, Dx::Number, Dy::Number, t0::Number, u::Number)
 			Mix = GreenNMFk.source(time, Xs[1], Xs[1,2:3], xD[d,:], D[1], D[2], t0, u) + noise * randn(size(time))
 			S[d, :] = [zeros(1, (d - 1) * numT) Mix zeros(1, (nd - d) * numT)]
 		else
@@ -83,4 +79,68 @@ function initial_conditions(As::Vector, Xs::Matrix, xD::Matrix, D::Matrix, t0::N
 	end
 
 	return S, XF
+end
+
+
+# Initial conditions 2 - calculation of observation matrix
+# Input:
+#	As    - Amplitudes of real sources
+#	Xs    - Sources matrix
+#	xD    - Detector positions
+#	D     - Diffusion coefficient [km^2/year]
+#	t0    - Initial time of sources
+#	u     - Flow speed [km/year]
+#	numT  - Number of time points
+#	noise - Noise strength
+#	time  - Time vector from t_initial to t_final
+#
+# Returns:
+#	S	  - Observation matrix
+#	XF	  - Observation matrix condensed to long vector
+#	W	  - Normalization matrix of Mixes
+
+function initial_conditions_2(As::Vector, Xs::Matrix, xD::Matrix, D, t0::Number, u::Number, numT::Number, noise::Number, time::Vector)
+	# Calculation of the observation matrix
+	nd = size(xD, 1)
+	S = Array{Float64}(nd, nd*numT)
+	W = Array{Float64}(nd, length(As))
+	
+	local Mix
+	
+	# Below, we are ordering the signals consecutively in a single vector
+	#========= Construction of the mixes at the detectors =========#
+	for i = 1:nd # Loop over number of detectors (nd)
+		
+		for d = 1:length(As) # Loop over the count of sources
+			
+			if (d == 1) # If first source...
+				Mix = GreenNMFk.source(time, Xs[d], Xs[d,2:3], xD[i,:], D[1], D[2], t0, u)
+			else # If second or higher source...
+				Mix = Mix + GreenNMFk.source(time, Xs[d], Xs[d,2:3], xD[i,:], D[1], D[2], t0, u)
+			end
+			
+			W[i,d] = sum(Mix)
+		end
+		
+		S[i,:] = [zeros(1, (i-1)*numT) Mix' zeros(1, (nd-i)*numT)]
+
+	end
+	
+	Wo = W
+	for j = 2:size(W,2)
+		Wo[:,j] = W[:,j] - W[:,j-1]
+	end
+	
+	W = Wo
+	for i = 1:size(W,1)
+		W[i,:] = W[i,:] ./ sum(W[i,:])
+	end
+	
+	# This is the single 'long vector' (of length # of detectors * # of time points)
+	XF = reshape(S', 1, (size(S,2) * nd))
+	
+	# The original source constants, [Ai Xi Yi]
+	xtrue = reshape(Xs', 1, (size(Xs, 2) * size(Xs, 1)))
+	
+	return S, XF, W
 end

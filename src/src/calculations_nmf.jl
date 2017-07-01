@@ -1,3 +1,6 @@
+# TODO: Parallel solver
+#		See this link: https://juliaeconomics.com/2014/06/18/parallel-processing-in-julia-bootstrapping-the-mle/
+
 # Purpose: 	Calculation of the solution with j sources
 #			Minimizes the function: ∑ᵢ(MixFn[i]- ∑ⱼ(Sources[i,j]))²
 #
@@ -22,9 +25,10 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 	# Number of independent variables to solve
 	nvar = 3 + number_of_sources * 3
 
-	sol = zeros(Nsim, 3 * number_of_sources + 3) # Solution matrix
-	normF = zeros(Nsim, 1) #
-	normF_abs = zeros(Nsim, 1) #
+	sol = Array{Float64}(Nsim, 3 * number_of_sources + 3) # Solution matrix
+	normF = Array{Float64}(Nsim, 1)
+	normF_abs = Array{Float64}(Nsim, 1)
+	
 	normCut = 0
 	Qyes = 0
 
@@ -46,16 +50,13 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 		fun_sum = 0
 		for i=1:nd
 			if number_of_sources == 1
-				#min_sum += source(time, x[4], x[4:6], xD[i,:], x[1], x[2], t0, x[3]) 
 				min_sum += source(time, x[4], x[5:6], xD[i,:], x[1], x[2], t0, x[3]) # replace with true variable names
 			else
 				for d=1:number_of_sources
 					if (d == 1)
 						min_sum += source(time, x[4], x[5:6], xD[i,:], x[1], x[2], t0, x[3])
-						#min_sum += source(time, x[4:6], xD[i,:], x[1:2], t0, x[3]) # replace with true variable names
 					else
 						min_sum += source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3])
-						#min_sum += source(time, x[d*3+1:d*3+3], xD[i,:], x[1:2], t0, x[3]) # replace with true variable names
 					end
 				end
 			end
@@ -157,15 +158,12 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 		normF = sqrt(normF./AA).*100
 
 		normCut = 0.1
-		println(normF)
+
 		# Find the indices of normF where the element is less than normCut
-		index_real = find(normF .< normCut)#find(normF[normF .< normCut]) #find(normF < normCut)
+		index_real = find(normF .< normCut)
 
 		real_num = real_num + length(index_real)
 		normF_real = [normF_real; normF[index_real]]
-		
-		println("sol = $(sol)")
-		println("index_real = $(index_real)")
 		
 		if sol_real == []
 			sol_real = sol[index_real,:]

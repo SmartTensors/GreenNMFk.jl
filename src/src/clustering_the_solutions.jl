@@ -1,3 +1,9 @@
+# TODO: This function needs improvement on clustering - particularily, 
+#			getting the silhouettes from NMFk.Finalize
+#
+#		• Fix silhouette clustering
+#		• Verify results are correct
+
 #=
 	Name: clustering_the_solutions
 	Purpose: 
@@ -7,7 +13,7 @@
 		(Int) Number of detectors
 		(Array{T,2}) NMF solution matrix
 		(Array{T,1}) NMF normF vector
-		(Float) Qyes
+		(Int) Determine number of quantiles (flag: 1/0)
 
 	Outputs:
 		Null
@@ -15,6 +21,11 @@
 =#
 function clustering_the_solutions(number_of_sources::Number, nd::Number, sol::Matrix, normF::Vector, Qyes::Number)
 	
+	GreenNMFk.log("Clustering NMFk solutions", 1, -1)
+
+	# Define initial variables
+	local number_of_clust_sim, vect_index, sol1, cent, ind
+	local mean_savg = 0
 	minsil_old = -2
 	
 	# Determine the number of quantiles
@@ -23,11 +34,14 @@ function clustering_the_solutions(number_of_sources::Number, nd::Number, sol::Ma
 		quants = Base.quantile(normF, linspace(0.2, 0.01, steps))
 	else
 		steps = 1
-		quants = max(normF)
+		quants = maximum(normF)
 	end
 	
 	# Calculation of silhouettes in different quantiles
 	for p = 1:steps	
+		GreenNMFk.log("Calculating silhouettes (quantile $(p)/$(steps))", 2, 1)
+		
+		number_of_clust_sim = p
 		ind = find(normF[normF .<= quants[p]])
 		sol1 = sol[ind,:]
 		
@@ -39,7 +53,7 @@ function clustering_the_solutions(number_of_sources::Number, nd::Number, sol::Ma
 	    #Each sol for one source    = [Ux Dx Dy A1 X1 Y1]
 		
 		just_source = sol1[:,4:end]
-		sources_3D = zeros(3, Int(size(just_source, 2)/3), size(just_source, 1))
+		sources_3D = Array{Float64}(3, Int(size(just_source, 2)/3), size(just_source, 1))
 		
 		local col, col_sources # If not defined, they go out of scope in for-loop
 		
@@ -63,24 +77,31 @@ function clustering_the_solutions(number_of_sources::Number, nd::Number, sol::Ma
 			end
 		end
 		
-		# _, vect_index, cent = ludmil_cluster(sources_3D, col_sources, 100)
-		idx, centroids = NMFk.clustersolutions(col_sources, true)
-		#ss = Clustering.silhouettes(col_sources, vect_index)
+		_, vect_index, cent = ludmil_cluster(sources_3D, col_sources, 100)
+		vect_index = Array{Int64,1}(vec(vect_index))
+		
+		GreenNMFk.log("Clustering solutions",2,2)
+		clusterassignments, centroids = NMFk.clustersolutions(col_sources', true)
+		
+		# ERROR: LoadError: BoundsError: attempt to access () at index [1]
+		#=
+		W, H, clustersilhouettes = NMFk.finalize(col_sources, vect_index, clusterassignments, true)
 		savg = grpstats(ss, vect_index)
 		minsil = savg
 		
 		if ((mean(minsil) < (minsil_old / 2)) || (size(ind, 1) < 5) || (min(minsil) > 0.95))
+			GreenNMFk.log("Broken at quantile $(p)",2,2)
 			break
 		end
 		
-		minsil_old = mean(minsil)
+		minsil_old = mean(minsil)=#
 	end
 	
-	number_of_clust_sim = p
+	idx1 = (vect_index .== 1) # Boolean array, true where vect_index[i] == 1
+	sol_matrix = sol1[vect_index[idx1],:]
+	avg_sol = [mean(sol_matrix[:,i]) for i=1:size(sol_matrix,2)]
 	
-	idx1 = vect_index==1
-	avg_sol = mean(sol1[vect_index[idx1],:])
-	solution = zeros(number_of_sources,6)
+	solution = Array{Float64}(number_of_sources,6)
 	
 	# Condense into single line?
 	for i = 1:number_of_sources
@@ -88,16 +109,18 @@ function clustering_the_solutions(number_of_sources::Number, nd::Number, sol::Ma
 	end
 	
 	reconstr = mean(normF[ind])
-	mean_savg = mean(savg)
+	#mean_savg = mean(savg) <-- Figure out clustering
 	
 	# Save a JLD file with function results
-	if save_output
+#=	if save_output
 		outfile = "Solution_$(nd)det_$(number_of_sources)sources.jld"
 		
 		GreenNMFk.log("Saving results to $(working_dir)/$(outfile)")
-		JLD.save(joinpath(working_dir, outfile), "Solution", Solution, "VectIndex", VectIndex, "Cent", Cent, "ss", ss, "savg", savg, "reconstr", reconstr, "mean_savg", mean_savg, "number_of_clust_sim", number_of_clust_sim)
+		JLD.save(joinpath(working_dir, outfile), "Solution", solution, "VectIndex", vect_index, "Cent", cent, "ss", ss, "savg", savg, "reconstr", reconstr, "mean_savg", mean_savg, "number_of_clust_sim", number_of_clust_sim)
 	end
+=#
 	
+	return solution, vect_index, cent, reconstr, mean_savg, number_of_clust_sim
 end
 		
 		

@@ -10,7 +10,7 @@
 #		u	- flow speed [km/year]
 function source(t::Vector, fs::Number, xs::Vector, xd::Vector, Dx::Number, Dy::Number, t0::Number, u::Number)
 	
-	# Cheap solution - if Dx, Dy < 0 then Dx, Dy = 0
+	# Cheap solution - if Dx || Dy < 0 then Dx || Dy = 0
 	(Dx < 0) && (Dx = 0)
 	(Dy < 0) && (Dy = 0)
 	

@@ -41,12 +41,11 @@ xD[9,:] = [0.5   0.0]
 
 nd = size(xD, 1)
 
-
 S, XF = GreenNMFk.initial_conditions(As,Xs,xD,D,t0,u,numT,noise,time)
 
 number_of_sources = 1
 GreenNMFk.log("\nNumber of sources : $(number_of_sources)")
-sol, normF, lb, ub, AA, sol_real, normF_real, normF1, sol_all = GreenNMFk.calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT)
+#sol, normF, lb, ub, AA, sol_real, normF_real, normF1, sol_all = GreenNMFk.calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT)
 
 ##########################################################################################
 prefix = "Results_9det_1sources"
@@ -104,6 +103,7 @@ sol_real = MAT.read(matlab_file, "sol_real")
 normF_real = MAT.read(matlab_file, "normF_real")[:]
 Qyes = MAT.read(matlab_file, "Qyes")
 
+#=
 solution, vect_index, cent, reconstr, mean_savg, number_of_clust_sim = GreenNMFk.clustering_the_solutions(number_of_sources, nd, sol_real, normF_real, Qyes)
 ##########################################################################################
 
@@ -116,6 +116,7 @@ for jj = 2:max_number_of_sources
 	SILL_AVG[number_of_sources] = mean_savg
 
 	number_of_sources = number_of_sources + 1
+	
 end
 
 #close all
@@ -129,14 +130,29 @@ if save_output
 	GreenNMFk.log("Saving results to $(working_dir)/$(outfile)")
 	JLD.save(joinpath(working_dir, outfile), "RECON", RECON, "SILL_AVG", SILL_AVG)
 end
+=#
+##########################################################################################
+prefix = "Solution_$(nd)det_$(max_number_of_sources)sources"
+matlab_file = MAT.matopen(joinpath(GreenNMFk.matlab_dir, prefix * ".mat"))
+cent = MAT.read(matlab_file, "Cent")
+solution = MAT.read(matlab_file, "Solution")
 
-x = 1:1:max_number_of_sources
-y1 = RECON
-y2 = SILL_AVG
+prefix = "All_$(nd)det_$(length(As))sources"
+matlab_file = MAT.matopen(joinpath(GreenNMFk.matlab_dir, prefix * ".mat"))
+RECON = MAT.read(matlab_file, "RECON")
+SILL_AVG = MAT.read(matlab_file, "SILL_AVG")
+##########################################################################################
 
-createfigureBSA(x, y1, y2)
+if GreenNMFk.show_plots == true
+	
+	X = Array{Float64}(1:1:max_number_of_sources)
+	plt = Gadfly.plot(Gadfly.layer(x=X, y=RECON[:], Gadfly.Geom.line), Gadfly.layer(x=X, y=SILL_AVG[:], Gadfly.Geom.line))
+	
+	display(plt)
+	
+end
 
-Sf, Comp, Dr, Det, Wf = GreenNMFk.CompRes(Cent, xD, solution, t0, numT, noise, time, S)
+Sf, Comp, Dr, Det, Wf = GreenNMFk.comp_res(cent, xD, solution, t0, numT, noise, S)
 
 # End stopwatch timer
 
