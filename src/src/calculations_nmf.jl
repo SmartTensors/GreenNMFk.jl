@@ -124,14 +124,14 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 			# Try/catch NL solver
 			nl_solver(iters) = try
 				model_NMF = JuMP.Model(solver=Ipopt.IpoptSolver(print_level=3, max_iter=iters))
-		    	JuMP.register(model_NMF, :nl_func, nvar, nl_func, autodiff=true)
-		    	@JuMP.variable(model_NMF, lb[i] <= x[i=1:nvar] <= ub[i], start=initCON[k,i])
-		    	JuMP.setNLobjective(model_NMF, :Min, Expr(:call, :nl_func, [x[i] for i=1:nvar]...))
+				JuMP.register(model_NMF, :nl_func, nvar, nl_func, autodiff=true)
+				@JuMP.variable(model_NMF, lb[i] <= x[i=1:nvar] <= ub[i], start=initCON[k,i])
+				JuMP.setNLobjective(model_NMF, :Min, Expr(:call, :nl_func, [x[i] for i=1:nvar]...))
 
-		    	JuMP.solve(model_NMF)
+				JuMP.solve(model_NMF)
 
 				result = 1
-		    	return [JuMP.getvalue(x[i]) for i=1:nvar]
+				return [JuMP.getvalue(x[i]) for i=1:nvar]
 			catch y
 				if isa(y, DomainError)
 					result = 0
