@@ -18,7 +18,6 @@
 # Returns:
 #
 function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT)
-
 	GreenNMFk.log("\nRunning NMF calculation...")
 	GreenNMFk.log("-----------------------------------------")
 
@@ -28,7 +27,7 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 	sol = Array{Float64}(Nsim, 3 * number_of_sources + 3) # Solution matrix
 	normF = Array{Float64}(Nsim, 1)
 	normF_abs = Array{Float64}(Nsim, 1)
-	
+
 	normCut = 0
 	Qyes = 0
 
@@ -48,6 +47,10 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 		x = collect(a)
 		min_sum = 0
 		fun_sum = 0
+		i = 1
+		# @show x[4], x[5:6], xD[i,:], x[1], x[2], t0, x[3]
+		# @show time
+		# @show source(time, x[4], x[5:6], xD[i,:], x[1], x[2], t0, x[3])
 		for i=1:nd
 			if number_of_sources == 1
 				min_sum += source(time, x[4], x[5:6], xD[i,:], x[1], x[2], t0, x[3]) # replace with true variable names
@@ -67,6 +70,7 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 				fun_sum += [zeros((i-1)*numT); min_sum; zeros((nd-i)*numT)] - S[i,:]
 			end
 		end
+		# @show fun_sum
 		return sum(fun_sum.^2)
 	end
 
@@ -107,25 +111,25 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 
 			initCON[k,:] = x_init
 		end
-		
+
 		GreenNMFk.log("  -> Running solver")
 		# Run solver once for every number of simulations
 
 		for k = 1:Nsim
-			
+
 			local solutions
 			result = 0 # For try/catch: 0 if failure, 1 for success
-			max_iters = 3000 # Maximum # of iterations for solver - decreases on failure
-			
+			max_iters = 1 # Maximum # of iterations for solver - decreases on failure
+
 			# Try/catch NL solver
 			nl_solver(iters) = try
 				model_NMF = JuMP.Model(solver=Ipopt.IpoptSolver(print_level=3, max_iter=iters))
 		    	JuMP.register(model_NMF, :nl_func, nvar, nl_func, autodiff=true)
 		    	@JuMP.variable(model_NMF, lb[i] <= x[i=1:nvar] <= ub[i], start=initCON[k,i])
 		    	JuMP.setNLobjective(model_NMF, :Min, Expr(:call, :nl_func, [x[i] for i=1:nvar]...))
-		
+
 		    	JuMP.solve(model_NMF)
-				
+
 				result = 1
 		    	return [JuMP.getvalue(x[i]) for i=1:nvar]
 			catch y
@@ -134,19 +138,18 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 					return 0
 				end
 			end
-		
+
 			# While solver fails...
 			while result == 0
 				GreenNMFk.log("  --> Run $(k)/$(Nsim): Trying with $(max_iters) iterations")
 				solutions = nl_solver(max_iters)
 				max_iters = max_iters - 200
-				
+
 				if max_iters < 500
 					GreenNMFk.log("Iterations too small: stopping")
-					exit(1)
 				end
 			end
-			
+
 			# If solver was successful
 			if result == 1
 				sol[k,:] = solutions
@@ -164,7 +167,7 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 
 		real_num = real_num + length(index_real)
 		normF_real = [normF_real; normF[index_real]]
-		
+
 		if sol_real == []
 			sol_real = sol[index_real,:]
 			sol_all = sol
@@ -172,7 +175,7 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 			sol_real = [sol_real; sol[index_real,:]]
 			sol_all = [sol_all; sol]
 		end
-		
+
 		normF1 = [normF1; normF]
 
 		j_all = j_all + Nsim
@@ -196,6 +199,6 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 		GreenNMFk.log("Saving results to $(working_dir)/$(outfile)")
 		JLD.save(joinpath(working_dir, outfile), "sol", sol, "normF", normF, "S", S, "lb", lb, "ub", ub, "AA", AA, "sol_real", sol_real, "normF_real", normF_real, "normF_abs", normF_abs, "DidItGoBack", DidItGoBack, "Qyes", Qyes)
 	end
-	
+
 	return sol, normF, lb, ub, AA, sol_real, normF_real, normF1, sol_all, normF_abs, Qyes
 end

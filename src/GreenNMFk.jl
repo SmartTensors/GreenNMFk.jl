@@ -26,7 +26,7 @@ matlab_tests = true
 # Currently print, can be moved to file IO
 function log(instream, io_flag=2, indent=0)
 	if io_level == 2 # Verbose output
-		
+
 		if indent == 2 # Second-tier indent
 			instream = "  --> " * instream
 		elseif indent == 1 # First tier indent
@@ -34,9 +34,9 @@ function log(instream, io_flag=2, indent=0)
 		elseif indent == -1 # Header output
 			instream = "\n" * instream * "\n-----------------------------------------"
 		end
-		
+
 		println(instream)
-		
+
 	elseif io_level == 1 # Limited output
 		(io_flag == 1) && println(instream)
 	end
@@ -55,7 +55,7 @@ else
 end
 
 # Edit to change desired output directory
-working_dir = joinpath(root_dir, "..", "Results")
+working_dir = joinpath(root_dir, "Results")
 
 # If directory doesn't exist, create it
 if !isdir(working_dir)
@@ -64,7 +64,7 @@ end
 
 if matlab_tests
 	import MAT
-	matlab_dir = joinpath(source_path, "..", "matlab", "Results")
+	matlab_dir = joinpath(root_dir, "matlab", "Results")
 end
 
 include("src/source.jl")

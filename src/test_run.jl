@@ -1,43 +1,42 @@
-include("GreenNMFk.jl")
-import GreenNMFk
+reload("GreenNMFk")
 
 function compare(infile)
 	prefix = split(infile, ".")[end-1]
-	
+
 	# Open corresponding Matlab and Julia files
 	matlab_file = MAT.matopen(joinpath(GreenNMFk.matlab_dir, prefix * ".mat"))
 	julia_file = JLD.load(joinpath(GreenNMFk.working_dir, infile))
-	
+
 	# Get variable names as dict
 	mat_keys = MAT.names(matlab_file)
-	
-		# Iterate over keys and test matching ones
-		for key in mat_keys
-			mat_result = MAT.read(matlab_file, key)
-			jld_result = julia_file[key]
-		
-			#println("key = $(key)")
-			#println("$(key)_jld = $(jld_result)")
-			#println("\n")
-			#println("$(key)_mat = $(mat_result)")
-		
-			rtype = string(typeof(mat_result))
-			if contains(rtype, "Array")
-				
-				# If dimensions don't match, throw an error
-				# May be better just to let the test fail
-				if size(mat_result) != size(jld_result)
-					println("ERROR: Dimension mismatch for $(key) in $(prefix)")
-				else
-					println("Δ$(key) = $(mean(sum(mat_result .- jld_result)))")
-				end
-				
-			elseif contains(rtype, "Float")
-				println("Δ$(key) = $(mat_result - jld_result)")
-			elseif contains(rtype, "Int")
-				println("Δ$(key) = $(mat_result - jld_result)")
+
+	# Iterate over keys and test matching ones
+	for key in mat_keys
+		mat_result = MAT.read(matlab_file, key)
+		jld_result = julia_file[key]
+
+		#println("key = $(key)")
+		#println("$(key)_jld = $(jld_result)")
+		#println("\n")
+		#println("$(key)_mat = $(mat_result)")
+
+		rtype = string(typeof(mat_result))
+		if contains(rtype, "Array")
+
+			# If dimensions don't match, throw an error
+			# May be better just to let the test fail
+			if size(mat_result) != size(jld_result)
+				println("ERROR: Dimension mismatch for $(key) in $(prefix) ($(size(mat_result)) != $(size(jld_result)))")
+			else
+				println("Δ$(key) = $(mean(sum(mat_result .- jld_result)))")
 			end
+
+		elseif contains(rtype, "Float")
+			println("Δ$(key) = $(mat_result - jld_result)")
+		elseif contains(rtype, "Int")
+			println("Δ$(key) = $(mat_result - jld_result)")
 		end
+	end
 end
 
 # Initialize simulation variables
@@ -49,7 +48,7 @@ time = collect(linspace(0, 20, numT))
 # Initialize equation parameters
 u = 0.05 # (km/yr) - flow speed
 D = [0.005 0.00125] # (km²/yr) - diffusion coefficient
-t0 = -10 # Initial time of sources
+t0 = -1 # Initial time of sources
 noise = 0E-3 # Noise strength
 As = [0.5; 0.5; 0.5; 0.5] # Amplitudes of real sources
 ns = length(As) # 'Real' number of sources
@@ -81,18 +80,18 @@ nd = size(xD, 1)
 
 S, XF = GreenNMFk.initial_conditions(As,Xs,xD,D,t0,u,numT,noise,time)
 
-number_of_sources = 1
-Nsim = 5
+number_of_sources = 2
+Nsim = 1
 
 GreenNMFk.calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT)
 
 # Test the two functions:
 
 println("Comparing initial conditions...")
-compare("xtrue_$(nd)det_$(length(As))sources.jld")
+# compare("xtrue_$(nd)det_$(length(As))sources.jld")
 
 println("\n\nComparing NMFk results...")
 compare("Results_$(nd)det_$(number_of_sources)sources.jld")
 
-GreenNMFk.test_results_mat("xtrue_$(nd)det_$(length(As))sources.jld")
+# GreenNMFk.test_results_mat("xtrue_$(nd)det_$(length(As))sources.jld")
 GreenNMFk.test_results_mat("Results_$(nd)det_$(number_of_sources)sources.jld")

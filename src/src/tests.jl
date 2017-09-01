@@ -2,31 +2,32 @@
 # test generated Julia files against known good Matlab files
 function test_results_mat(infile)
 	prefix = split(infile, ".")[end-1]
-	
+
 	# Open corresponding Matlab and Julia files
 	matlab_file = MAT.matopen(joinpath(matlab_dir, prefix * ".mat"))
 	julia_file = JLD.load(joinpath(working_dir, infile))
-	
+
 	# Get variable names as dict
 	mat_keys = MAT.names(matlab_file)
-	
+
 	@Base.Test.testset "Julia <-> Matlab" begin
 		# Iterate over keys and test matching ones
 		for key in mat_keys
 			mat_result = MAT.read(matlab_file, key)
 			jld_result = julia_file[key]
-		
+
 			rtype = string(typeof(mat_result))
 			if contains(rtype, "Array")
-				
+
 				# If dimensions don't match, throw an error
 				# May be better just to let the test fail
 				if size(mat_result) != size(jld_result)
-					println("ERROR: Dimension mismatch for $(key) in $(prefix)")
+					println("ERROR: Dimension mismatch for $(key) in $(prefix) ($(size(mat_result)) != $(size(jld_result)))")
 				else
+					@show mean(sum(mat_result .- jld_result))
 					@Base.Test.test isapprox(mean(sum(mat_result .- jld_result)), 0.0, atol=1e-2)
 				end
-				
+
 			elseif contains(rtype, "Float")
 				@Base.Test.test isapprox(mat_result, jld_result, atol=1e-6)
 			elseif contains(rtype, "Int")
