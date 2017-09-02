@@ -70,7 +70,7 @@ end
 
 nvar = 1
 m = JuMP.Model(solver=Ipopt.IpoptSolver())
-JuMP.register(m, :nl_func, nvar, fun, autodiff=true)
+JuMP.register(m, :nl_func, nvar, nl_func, autodiff=true)
 @JuMP.variable(m, x[i=1:nvar], start=4)
 # @eval @JuMP.NLobjective(m, Min, $(Expr(:call, :nl_func, [Expr(:ref, :x, i) for i=1:nvar]...)))
 JuMP.setNLobjective(m, :Min, Expr(:call, :nl_func, [x[i] for i=1:nvar]...))

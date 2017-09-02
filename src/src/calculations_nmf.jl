@@ -45,6 +45,22 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 	# Define the function that will be minimized
 	# funF = ∑ᵢ(MixFn[i]- ∑ⱼ(Sources[i,j]))²
 	GreenNMFk.log("  Define the function to be minimized")
+	function create_problem(a...)
+		x = collect(a)
+		S = zeros(similar(S))
+		min_sum = zeros(numberoftimes)
+		for i=1:nd
+			for d=1:number_of_sources
+				min_sum += source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3])
+			end
+			if i == 1
+				S[i,:] += [min_sum; zeros((nd-1)*numT)]
+			else
+				S[i,:] += [zeros((i-1)*numT); min_sum; zeros((nd-i)*numT)]
+			end
+		end
+	end
+
 	function nl_func(a...)
 		x = collect(a)
 		#fun_sum = zeros(nd*numT)
@@ -57,15 +73,15 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 			for d=1:number_of_sources
 				min_sum += source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3])
 			end
-			if i == 1
+			#if i == 1
 				#fun_sum = [min_sum; zeros((nd-1)*numT)] .- S[i,:]
-				fun_sum2 += sum((min_sum .- S[i,1:i*numT]).^2)
-				fun_sum2 += sum(S[i,i*numT+1:nd*numT].^2)
-			else
+				#fun_sum2 += sum((min_sum .- S[i,1:i*numT]).^2)
+				#fun_sum2 += sum(S[i,i*numT+1:nd*numT].^2)
+			#else
 				#fun_sum += [zeros((i-1)*numT); min_sum; zeros((nd-i)*numT)] .- S[i,:]
 				fun_sum2 += sum((min_sum .- S[i,(i-1)*numT+1:i*numT]).^2)
 				fun_sum2 += sum(S[i,1:i*numT:(i-1)*numT].^2) + sum(S[i,i*numT+1:nd*numT].^2)
-			end
+			#end
 		end
 		#@show sum(fun_sum.^2)
 		#@show fun_sum2
@@ -94,7 +110,8 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 	end
 
 	GreenNMFk.log("  Running NMF calculations")
-	while ((real_num < cutNum) && (j_all < 10 * Nsim))
+	result = 0
+	while result == 0
 		#options = optimset("MaxFunEvals", 3000) # Set maximum times to evaluate function at 3000
 		initCON = Array{Float64}(Nsim, 3 * number_of_sources + 3)
 
@@ -105,7 +122,7 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 
 			for d = 1:number_of_sources
 				# The size is 3*number_of_sources+3 for the IC
-				x_init = [x_init rand() 2*aa*(0.5 - rand(1,2))]
+				x_init = [x_init rand()*1.5 aa * (rand()-0.5) aa * (2*rand()-0.5)]
 			end
 
 			initCON[k,:] = x_init
@@ -114,9 +131,11 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 		GreenNMFk.log("  -> Running solver")
 		# Run solver once for every number of simulations
 
+		# global x_true = initCON[1,:]
+		# create_problem(initCON[1,:]...)
 		# @show nl_func(initCON[1,:]...)
 
-		for k = 1:Nsim
+		for k = 1:1
 
 			local solutions
 			result = 0 # For try/catch: 0 if failure, 1 for success
@@ -126,7 +145,9 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 			nl_solver(iters) = try
 				model_NMF = JuMP.Model(solver=Ipopt.IpoptSolver(print_level=3, max_iter=iters))
 				JuMP.register(model_NMF, :nl_func, nvar, nl_func, autodiff=true)
-				@JuMP.variable(model_NMF, lb[i] <= x[i=1:nvar] <= ub[i], start=initCON[k,i])
+				@JuMP.variable(model_NMF, x[i=1:nvar], start=initCON[k,i])
+				@JuMP.constraint(model_NMF, x[i=1:nvar] .<= ub[i=1:nvar]) # slows down if the initial guesses are
+				@JuMP.constraint(model_NMF, x[i=1:nvar] .>= lb[i=1:nvar]) # the true values
 				JuMP.setNLobjective(model_NMF, :Min, Expr(:call, :nl_func, [x[i] for i=1:nvar]...))
 
 				JuMP.solve(model_NMF)
