@@ -24,6 +24,8 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 	# Number of independent variables to solve
 	nvar = 3 + number_of_sources * 3
 
+	numberoftimes = length(time)
+
 	sol = Array{Float64}(Nsim, 3 * number_of_sources + 3) # Solution matrix
 	normF = Array{Float64}(Nsim, 1)
 	normF_abs = Array{Float64}(Nsim, 1)
@@ -45,30 +47,22 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 	GreenNMFk.log("  Define the function to be minimized")
 	function nl_func(a...)
 		x = collect(a)
-		min_sum = 0
-		fun_sum = 0
-		i = 1
+		min_sum = zeros(numberoftimes)
 		# @show x[4], x[5:6], xD[i,:], x[1], x[2], t0, x[3]
 		# @show time
 		# @show source(time, x[4], x[5:6], xD[i,:], x[1], x[2], t0, x[3])
 		for i=1:nd
-			if number_of_sources == 1
-				min_sum += source(time, x[4], x[5:6], xD[i,:], x[1], x[2], t0, x[3]) # replace with true variable names
-			else
-				for d=1:number_of_sources
-					if (d == 1)
-						min_sum += source(time, x[4], x[5:6], xD[i,:], x[1], x[2], t0, x[3])
-					else
-						min_sum += source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3])
-					end
-				end
+			for d=1:number_of_sources
+				min_sum += source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3])
 			end
-
-			if (i == 1)
-				fun_sum += [min_sum; zeros((nd-1)*numT)] - S[i,:]
+			#@show x
+			#@show min_sum
+			if i == 1
+				fun_sum = [min_sum; zeros((nd-1)*numT)] .- S[i,:]
 			else
-				fun_sum += [zeros((i-1)*numT); min_sum; zeros((nd-i)*numT)] - S[i,:]
+				fun_sum += [zeros((i-1)*numT); min_sum; zeros((nd-i)*numT)] .- S[i,:]
 			end
+			#@show fun_sum
 		end
 		# @show fun_sum
 		return sum(fun_sum.^2)
@@ -147,6 +141,7 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 
 				if max_iters < 500
 					GreenNMFk.log("Iterations too small: stopping")
+					break
 				end
 			end
 
