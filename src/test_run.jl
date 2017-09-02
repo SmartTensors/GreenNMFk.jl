@@ -83,7 +83,7 @@ S, XF = GreenNMFk.initial_conditions(As,Xs,xD,D,t0,u,numT,noise,time)
 number_of_sources = 2
 Nsim = 1
 
-GreenNMFk.calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT)
+sol, normF, lb, ub, AA, sol_real, normF_real, normF1, sol_all, normF_abs, Qyes = GreenNMFk.calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT)
 
 # Test the two functions:
 
