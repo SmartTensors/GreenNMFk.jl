@@ -47,6 +47,8 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 	GreenNMFk.log("  Define the function to be minimized")
 	function nl_func(a...)
 		x = collect(a)
+		#fun_sum = zeros(nd*numT)
+		fun_sum2 = 0
 		min_sum = zeros(numberoftimes)
 		# @show x[4], x[5:6], xD[i,:], x[1], x[2], t0, x[3]
 		# @show time
@@ -55,17 +57,19 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 			for d=1:number_of_sources
 				min_sum += source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3])
 			end
-			#@show x
-			#@show min_sum
 			if i == 1
-				fun_sum = [min_sum; zeros((nd-1)*numT)] .- S[i,:]
+				#fun_sum = [min_sum; zeros((nd-1)*numT)] .- S[i,:]
+				fun_sum2 += sum((min_sum .- S[i,1:i*numT]).^2)
+				fun_sum2 += sum(S[i,i*numT+1:nd*numT].^2)
 			else
-				fun_sum += [zeros((i-1)*numT); min_sum; zeros((nd-i)*numT)] .- S[i,:]
+				#fun_sum += [zeros((i-1)*numT); min_sum; zeros((nd-i)*numT)] .- S[i,:]
+				fun_sum2 += sum((min_sum .- S[i,(i-1)*numT+1:i*numT]).^2)
+				fun_sum2 += sum(S[i,1:i*numT:(i-1)*numT].^2) + sum(S[i,i*numT+1:nd*numT].^2)
 			end
-			#@show fun_sum
 		end
-		# @show fun_sum
-		return sum(fun_sum.^2)
+		#@show sum(fun_sum.^2)
+		#@show fun_sum2
+		return fun_sum2
 	end
 
 	GreenNMFk.log("  Calculating simulation parameters")
@@ -95,8 +99,9 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 		initCON = Array{Float64}(Nsim, 3 * number_of_sources + 3)
 
 		GreenNMFk.log("  -> Calculating initial conditions")
+		#TODO needs to be fixed to represent actual upper/lower bound arrays
 		for k = 1:Nsim
-			x_init = [rand(1) 2*aa*(0.5 - rand(1,2))]
+			x_init = rand(3)'
 
 			for d = 1:number_of_sources
 				# The size is 3*number_of_sources+3 for the IC
@@ -109,11 +114,13 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 		GreenNMFk.log("  -> Running solver")
 		# Run solver once for every number of simulations
 
+		# @show nl_func(initCON[1,:]...)
+
 		for k = 1:Nsim
 
 			local solutions
 			result = 0 # For try/catch: 0 if failure, 1 for success
-			max_iters = 1 # Maximum # of iterations for solver - decreases on failure
+			max_iters = 100 # Maximum # of iterations for solver - decreases on failure
 
 			# Try/catch NL solver
 			nl_solver(iters) = try
