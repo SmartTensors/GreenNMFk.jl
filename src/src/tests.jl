@@ -1,16 +1,16 @@
 # Using the module MAT, which can read in Matlab files,
 # test generated Julia files against known good Matlab files
-function test_results_mat(infile)
+function test_results_mat(infile::String; ml_dir::String=matlab_dir,wk_dir::String=working_dir)
 	prefix = split(infile, ".")[end-1]
 
 	# Open corresponding Matlab and Julia files
-	matlab_file = MAT.matopen(joinpath(matlab_dir, prefix * ".mat"))
-	julia_file = JLD.load(joinpath(working_dir, infile))
+	matlab_file = MAT.matopen(joinpath(ml_dir, prefix * ".mat"))
+	julia_file = JLD.load(joinpath(wk_dir, infile))
 
 	# Get variable names as dict
 	mat_keys = MAT.names(matlab_file)
 
-	@Base.Test.testset "Julia <-> Matlab" begin
+	@Base.Test.testset "JLD/MAT Test for: $(prefix)" begin
 		# Iterate over keys and test matching ones
 		for key in mat_keys
 			mat_result = MAT.read(matlab_file, key)

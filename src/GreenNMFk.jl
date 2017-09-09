@@ -7,6 +7,7 @@ import JLD # Used for file IO
 import Base # Used for system paths
 import JuMP # Used for nonlinear modeling
 import Ipopt # Nonlinear solver
+import NLopt
 import DataFrames # Helpful in Gadfly plotting
 import Clustering # Silhouette clustering
 
@@ -17,7 +18,7 @@ io_level = 2
 save_output = true
 
 # Show Gadfly plots?
-show_plots = true
+show_plots = false
 
 # Set to true to test against Matlab output
 matlab_tests = true

@@ -11,8 +11,13 @@
 function source(t::Vector, fs::Number, xs::Vector, xd::Vector, Dx::Number, Dy::Number, t0::Number, u::Number)
 
 	# Cheap solution - if Dx || Dy < 0 then Dx || Dy = 0
-	(Dx < 0) && (Dx = 0)
-	(Dy < 0) && (Dy = 0)
+	#(Dx < 0) && (Dx = 0)
+	#(Dy < 0) && (Dy = 0)
+	#Dx = convert(Float64,Dx)
+	#Dy = convert(Float64,Dy)
+
+	#Dx = convert(Float32,Dx)
+	#Dy = convert(Float32,Dy)
 
 	# The solver will occasionally pass negative values for Dx/Dy. Try/catch them.
 	# ERROR: DomainError:
