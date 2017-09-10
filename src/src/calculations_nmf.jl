@@ -1,3 +1,21 @@
+import NLopt
+
+function create_problem(x, nd, numT, ns, xD, t0, time)
+	S1 = zeros(nd, nd * numT)
+	min_sum = zeros(numT)
+	for i=1:nd
+		for d=1:ns
+			min_sum += source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3])
+		end
+		if i == 1
+			S1[i,:] += [min_sum; zeros((nd-1)*numT)]
+		else
+			S1[i,:] += [zeros((i-1)*numT); min_sum; zeros((nd-i)*numT)]
+		end
+	end
+	return S1
+end
+
 # TODO: Parallel solver
 #		See this link: https://juliaeconomics.com/2014/06/18/parallel-processing-in-julia-bootstrapping-the-mle/
 
@@ -17,7 +35,7 @@
 
 # Returns:
 #
-function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT)
+function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT, x_true)
 	GreenNMFk.log("\nRunning NMF calculation...")
 	GreenNMFk.log("-----------------------------------------")
 
@@ -99,6 +117,8 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 		lb = [lb 0 -aa -aa] # replace with true variable names
 		ub = [ub 1.5 aa aa] # replace with true variable names
 	end
+	ub = convert(Array{Float32}, ub)
+	lb = convert(Array{Float32}, lb)
 
 	# The norm of the observational matrix / vector
 	AA = 0
@@ -108,69 +128,63 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 		SS = S[i,:].^2
 		AA = AA + sum(SS)
 	end
+	GreenNMFk.log("  -> Calculating initial guesses")
+	#TODO needs to be fixed to represent actual upper/lower bound arrays
+	function rg(x::Vector{Float64}=Vector{Float64}(0))
+		if length(x) == 0
+			x_init = rand(3)'
+			for d = 1:number_of_sources
+				x_init = [x_init rand()*1.5 aa * (rand()-0.5) aa * (rand()-0.5)]
+			end
+		else
+			x_init = x + (rand(length(x)) * 0.001)
+		end
+		return x_init
+	end
 
 	GreenNMFk.log("  Running NMF calculations")
 	result = 0
 	while result == 0
 		#options = optimset("MaxFunEvals", 3000) # Set maximum times to evaluate function at 3000
-		initCON = Array{Float64}(Nsim, 3 * number_of_sources + 3)
-
-		GreenNMFk.log("  -> Calculating initial conditions")
-		#TODO needs to be fixed to represent actual upper/lower bound arrays
-		for k = 1:Nsim
-			x_init = rand(3)'
-
-			for d = 1:number_of_sources
-				# The size is 3*number_of_sources+3 for the IC
-				x_init = [x_init rand()*1.5 aa * (rand()-0.5) aa * (2*rand()-0.5)]
-			end
-
-			initCON[k,:] = x_init
-		end
 
 		GreenNMFk.log("  -> Running solver")
-		# Run solver once for every number of simulations
+		@show nl_func(x_true...)
 
-		# global x_true = initCON[1,:]
-		# create_problem(initCON[1,:]...)
-		# @show nl_func(initCON[1,:]...)
+		#global x_true = initCON[1,:]
+		#create_problem(initCON[1,:]...)
 
-		for k = 1:1
-
+		for k = 1:Nsim
+			@show k
 			local solutions
+			of = Inf
 			result = 0 # For try/catch: 0 if failure, 1 for success
-			max_iters = 100 # Maximum # of iterations for solver - decreases on failure
+			max_iters = 100000 # Maximum # of iterations for solver - decreases on failure
 
 			# Try/catch NL solver
-			nl_solver(iters) = try
-				model_NMF = JuMP.Model(solver=Ipopt.IpoptSolver(print_level=3, max_iter=iters))
+			function nl_solver(x_init)
+				model_NMF = JuMP.Model(solver=NLopt.NLoptSolver(algorithm=:LD_MMA, maxeval=max_iters))
+				# model_NMF = JuMP.Model(solver=Ipopt.IpoptSolver(print_level=0, max_iter=max_iters))
 				JuMP.register(model_NMF, :nl_func, nvar, nl_func, autodiff=true)
-				@JuMP.variable(model_NMF, x[i=1:nvar], start=initCON[k,i])
+				@JuMP.variable(model_NMF, x[i=1:nvar], start=x_init[i])
 				@JuMP.constraint(model_NMF, x[i=1:nvar] .<= ub[i=1:nvar]) # slows down if the initial guesses are
 				@JuMP.constraint(model_NMF, x[i=1:nvar] .>= lb[i=1:nvar]) # the true values
 				JuMP.setNLobjective(model_NMF, :Min, Expr(:call, :nl_func, [x[i] for i=1:nvar]...))
 
 				JuMP.solve(model_NMF)
-
+				of = JuMP.getobjectivevalue(model_NMF)
 				result = 1
 				return [JuMP.getvalue(x[i]) for i=1:nvar]
-			catch y
-				if isa(y, DomainError)
-					result = 0
-					return 0
-				end
 			end
 
 			# While solver fails...
-			while result == 0
-				GreenNMFk.log("  --> Run $(k)/$(Nsim): Trying with $(max_iters) iterations")
-				solutions = nl_solver(max_iters)
-				max_iters = max_iters - 200
-
-				if max_iters < 500
-					GreenNMFk.log("Iterations too small: stopping")
-					break
-				end
+			tol = 1e-1
+			while of > tol
+				x_init = rg(x_true)
+				of = nl_func(x_init...)
+				@show x_init
+				GreenNMFk.log("  --> Run $(k)/$(Nsim): Initial OF $(of)")
+				solutions = nl_solver(x_init)
+				GreenNMFk.log("  --> Run $(k)/$(Nsim): Optimized OF $(of)")
 			end
 
 			# If solver was successful

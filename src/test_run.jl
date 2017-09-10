@@ -59,7 +59,7 @@ Xn = [[-0.3; -0.4] [0.4; -0.3] [ -0.1; 0.25] [ -0.3; 0.65]];
 Xs = ones(length(As), 3)
 
 # Ordering matrix of the sources: [A X Y]
-for k = 1:size(Xs,1)
+for k = 1:ns
 	Xs[k,:] = [As[k] Xn[1,k] Xn[2,k]]
 end
 
@@ -78,12 +78,24 @@ nd = size(xD, 1)
 
 ##########################################################
 
-S, XF = GreenNMFk.initial_conditions(As,Xs,xD,D,t0,u,numT,noise,time)
+x_true = [D[1], D[2], u]
+for k = 1:size(Xs,1)
+	x_true = [x_true..., As[k], Xn[1,k], Xn[2,k]]
+end
 
-number_of_sources = 2
+Sold, XF = GreenNMFk.initial_conditions(As,Xs,xD,D,t0,u,numT,noise,time)
+
+S = GreenNMFk.create_problem(x_true, nd, numT, ns, xD, t0, time)
+
+# Sold is wrong
+# S is correct
+
+number_of_sources = ns
 Nsim = 1
 
-sol, normF, lb, ub, AA, sol_real, normF_real, normF1, sol_all, normF_abs, Qyes = GreenNMFk.calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT)
+srand(2015)
+
+sol, normF, lb, ub, AA, sol_real, normF_real, normF1, sol_all, normF_abs, Qyes = GreenNMFk.calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT, x_true)
 
 # Test the two functions:
 
