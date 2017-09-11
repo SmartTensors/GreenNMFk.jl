@@ -54,7 +54,6 @@ As = [0.5; 0.5; 0.5; 0.5] # Amplitudes of real sources
 ns = length(As) # 'Real' number of sources
 
 aa = 1 # Multiple for initial random conditions
-Xn = Array{Float64}(2,length(As)) # Initialize Xn -> source coordinates
 Xn = [[-0.3; -0.4] [0.4; -0.3] [ -0.1; 0.25] [ -0.3; 0.65]];
 Xs = ones(length(As), 3)
 
@@ -78,9 +77,9 @@ nd = size(xD, 1)
 
 ##########################################################
 
-x_true = [D[1], D[2], u]
+x_true = log10([D[1], D[2], u])
 for k = 1:size(Xs,1)
-	x_true = [x_true..., As[k], Xn[1,k], Xn[2,k]]
+	x_true = [x_true..., log10(As[k]), Xn[1,k], Xn[2,k]]
 end
 
 Sold, XF = GreenNMFk.initial_conditions(As,Xs,xD,D,t0,u,numT,noise,time)
@@ -91,7 +90,7 @@ S = GreenNMFk.create_problem(x_true, nd, numT, ns, xD, t0, time)
 # S is correct
 
 number_of_sources = ns
-Nsim = 1
+Nsim = 100
 
 srand(2015)
 

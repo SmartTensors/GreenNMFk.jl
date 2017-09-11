@@ -1,4 +1,5 @@
 import NLopt
+import Mads
 
 function create_problem(x, nd, numT, ns, xD, t0, time)
 	S1 = zeros(nd, nd * numT)
@@ -106,19 +107,38 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 		return fun_sum2
 	end
 
+	function nl_func_mads(x)
+		fun_sum = zeros(nd*numT)
+		min_sum = zeros(numberoftimes)
+		# @show x[4], x[5:6], xD[i,:], x[1], x[2], t0, x[3]
+		# @show time
+		# @show source(time, x[4], x[5:6], xD[i,:], x[1], x[2], t0, x[3])
+		for i=1:nd
+			for d=1:number_of_sources
+				min_sum += source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3])
+			end
+			if i == 1
+				fun_sum = [min_sum; zeros((nd-1)*numT)] .- S[i,:]
+			else
+				fun_sum += [zeros((i-1)*numT); min_sum; zeros((nd-i)*numT)] .- S[i,:]
+			end
+		end
+		return fun_sum
+	end
+
 	GreenNMFk.log("  Calculating simulation parameters")
 	# Defining the lower and upper boundary for the minimization
-	lb = [0 0 0] # replace with true variable names
-	ub = [1 1 1] # replace with true variable names
+	lb = [-6 -6 -6] # replace with true variable names
+	ub = [0 0 0] # replace with true variable names
 
 	# This loop is on the number of sources we investigate
 	# We need limits for all sources (ampl and coord)
 	for jj = 1:number_of_sources
-		lb = [lb 0 -aa -aa] # replace with true variable names
-		ub = [ub 1.5 aa aa] # replace with true variable names
+		lb = [lb -6 -aa -aa] # replace with true variable names
+		ub = [ub 0.2 aa aa] # replace with true variable names
 	end
-	ub = convert(Array{Float32}, ub)
-	lb = convert(Array{Float32}, lb)
+	ub = convert(Array{Float64}, ub)
+	lb = convert(Array{Float64}, lb)
 
 	# The norm of the observational matrix / vector
 	AA = 0
@@ -132,14 +152,21 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 	#TODO needs to be fixed to represent actual upper/lower bound arrays
 	function rg(x::Vector{Float64}=Vector{Float64}(0))
 		if length(x) == 0
-			x_init = rand(3)'
+			x_init = (rand(3) * 6 - 6)'
 			for d = 1:number_of_sources
-				x_init = [x_init rand()*1.5 aa * (rand()-0.5) aa * (rand()-0.5)]
+				x_init = [x_init rand()*6-6 aa * (rand()-0.5) aa * (rand()-0.5)]
 			end
 		else
 			x_init = x + (rand(length(x)) * 0.001)
 		end
 		return x_init
+	end
+	x_init = rg(x_true)
+	x_est = vec(x_init)
+	while false
+		x_est, r = Mads.minimize(nl_func_mads, x_est; upperbounds=vec(ub), lowerbounds=vec(lb), tolX=1e-12, tolG=1e-6, tolOF=1e-3)
+		@show x_est
+		@show r
 	end
 
 	GreenNMFk.log("  Running NMF calculations")
@@ -154,16 +181,15 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 		#create_problem(initCON[1,:]...)
 
 		for k = 1:Nsim
-			@show k
 			local solutions
 			of = Inf
 			result = 0 # For try/catch: 0 if failure, 1 for success
-			max_iters = 100000 # Maximum # of iterations for solver - decreases on failure
+			max_iters = 1000 # Maximum # of iterations for solver - decreases on failure
 
 			# Try/catch NL solver
 			function nl_solver(x_init)
-				model_NMF = JuMP.Model(solver=NLopt.NLoptSolver(algorithm=:LD_MMA, maxeval=max_iters))
-				# model_NMF = JuMP.Model(solver=Ipopt.IpoptSolver(print_level=0, max_iter=max_iters))
+				# model_NMF = JuMP.Model(solver=NLopt.NLoptSolver(algorithm=:LD_MMA, maxeval=max_iters))
+				model_NMF = JuMP.Model(solver=Ipopt.IpoptSolver(print_level=0, max_iter=max_iters))
 				JuMP.register(model_NMF, :nl_func, nvar, nl_func, autodiff=true)
 				@JuMP.variable(model_NMF, x[i=1:nvar], start=x_init[i])
 				@JuMP.constraint(model_NMF, x[i=1:nvar] .<= ub[i=1:nvar]) # slows down if the initial guesses are
@@ -178,13 +204,18 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 
 			# While solver fails...
 			tol = 1e-1
+			x_init = rg()
+			of = nl_func(x_init...)
+			@show x_init
+			solutions = x_init
 			while of > tol
-				x_init = rg(x_true)
-				of = nl_func(x_init...)
-				@show x_init
 				GreenNMFk.log("  --> Run $(k)/$(Nsim): Initial OF $(of)")
-				solutions = nl_solver(x_init)
+				# solutions = nl_solver(solutions)
+				solutions, r = Mads.minimize(nl_func_mads, x_est; upperbounds=vec(ub), lowerbounds=vec(lb), tolX=1e-12, tolG=1e-6, tolOF=1e-3)
+				of = r.minimum
+				@show solutions
 				GreenNMFk.log("  --> Run $(k)/$(Nsim): Optimized OF $(of)")
+				result = 1
 			end
 
 			# If solver was successful
