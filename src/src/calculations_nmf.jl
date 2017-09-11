@@ -128,14 +128,16 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 
 	GreenNMFk.log("  Calculating simulation parameters")
 	# Defining the lower and upper boundary for the minimization
-	lb = [-6 -6 -6] # replace with true variable names
-	ub = [0 0 0] # replace with true variable names
+	lb = [1e-6 1e-6 1e-6] # replace with true variable names
+	ub = [1 1 1] # replace with true variable names
+	pl = [true true true]
 
 	# This loop is on the number of sources we investigate
 	# We need limits for all sources (ampl and coord)
 	for jj = 1:number_of_sources
-		lb = [lb -6 -aa -aa] # replace with true variable names
-		ub = [ub 0.2 aa aa] # replace with true variable names
+		lb = [lb 1e-6 -aa -aa] # replace with true variable names
+		ub = [ub 1.5 aa aa] # replace with true variable names
+		pl = [pl true false false]
 	end
 	ub = convert(Array{Float64}, ub)
 	lb = convert(Array{Float64}, lb)
@@ -152,21 +154,14 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 	#TODO needs to be fixed to represent actual upper/lower bound arrays
 	function rg(x::Vector{Float64}=Vector{Float64}(0))
 		if length(x) == 0
-			x_init = (rand(3) * 6 - 6)'
+			x_init = rand(3)'
 			for d = 1:number_of_sources
-				x_init = [x_init rand()*6-6 aa * (rand()-0.5) aa * (rand()-0.5)]
+				x_init = [x_init rand()*1.5 aa * (rand()-0.5) aa * (rand()-0.5)]
 			end
 		else
 			x_init = x + (rand(length(x)) * 0.001)
 		end
 		return x_init
-	end
-	x_init = rg(x_true)
-	x_est = vec(x_init)
-	while false
-		x_est, r = Mads.minimize(nl_func_mads, x_est; upperbounds=vec(ub), lowerbounds=vec(lb), tolX=1e-12, tolG=1e-6, tolOF=1e-3)
-		@show x_est
-		@show r
 	end
 
 	GreenNMFk.log("  Running NMF calculations")
@@ -207,11 +202,14 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 			x_init = rg()
 			of = nl_func(x_init...)
 			@show x_init
+			@show x_true
 			solutions = x_init
 			while of > tol
 				GreenNMFk.log("  --> Run $(k)/$(Nsim): Initial OF $(of)")
 				# solutions = nl_solver(solutions)
-				solutions, r = Mads.minimize(nl_func_mads, x_est; upperbounds=vec(ub), lowerbounds=vec(lb), tolX=1e-12, tolG=1e-6, tolOF=1e-3)
+				@show ub
+				@show lb
+					solutions, r = Mads.minimize(nl_func_mads, vec(x_true); upperbounds=vec(ub), lowerbounds=vec(lb), logtransformed=vec(pl), tolX=1e-12, tolG=1e-12, tolOF=1e-3)
 				of = r.minimum
 				@show solutions
 				GreenNMFk.log("  --> Run $(k)/$(Nsim): Optimized OF $(of)")

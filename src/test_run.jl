@@ -77,9 +77,9 @@ nd = size(xD, 1)
 
 ##########################################################
 
-x_true = log10([D[1], D[2], u])
+x_true = [D[1], D[2], u]
 for k = 1:size(Xs,1)
-	x_true = [x_true..., log10(As[k]), Xn[1,k], Xn[2,k]]
+	x_true = [x_true..., As[k], Xn[1,k], Xn[2,k]]
 end
 
 Sold, XF = GreenNMFk.initial_conditions(As,Xs,xD,D,t0,u,numT,noise,time)

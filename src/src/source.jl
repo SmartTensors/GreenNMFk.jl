@@ -23,10 +23,6 @@ function source(t::Vector, fs::Number, xs::Vector, xd::Vector, Dx::Number, Dy::N
 	# The solver will occasionally pass negative values for Dx/Dy. Try/catch them.
 	# ERROR: DomainError:
 	# sqrt will only return a complex result if called with a complex argument. Try sqrt(complex(x)).
-	Dx = 10.^Dx
-	Dy = 10.^Dy
-	fs = 10.^fs
-	u = 10.^u
 	coeff1 = (fs./(4*pi*sqrt(Dx*Dy)*(t-t0)))
 	coeff2 = exp(-(((xd[1] - (xs[1] + u*(t-t0))).^2)./(4*Dx*(t-t0))))
 	coeff3 = exp(-((xd[2] - xs[2]).^2)./(4*Dy*(t-t0)))
