@@ -1,45 +1,35 @@
-import NLopt
-import Mads
 
-function create_problem(x, nd, numT, ns, xD, t0, time)
-	S1 = zeros(nd, nd * numT)
-	min_sum = zeros(numT)
-	for i=1:nd
-		for d=1:ns
-			min_sum += source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3])
-		end
-		if i == 1
-			S1[i,:] += [min_sum; zeros((nd-1)*numT)]
-		else
-			S1[i,:] += [zeros((i-1)*numT); min_sum; zeros((nd-i)*numT)]
-		end
-	end
-	return S1
-end
+"""
+Calculation of the solution with j sources.
+Minimizes the function sum_i((MixFn[i]) - sum_j(Sources[i,j]))**2
 
-# TODO: Parallel solver
-#		See this link: https://juliaeconomics.com/2014/06/18/parallel-processing-in-julia-bootstrapping-the-mle/
+$(DocumentFunction.documentfunction(calculations_nmf;
+argtext=Dict("number_of_sources"=>"",
+			"nd"=>"number of detectors",
+			"Nsim"=>"number of simulations to run",
+			"aa"=>"boundary condition coefficient",
+			"xD"=>"detector positions",
+			"t0"=>"initial time of sources",
+			"time"=>"time vector",
+			"S"=>"observation matrix",
+			"numT"=>"number of time points",
+			"x_true"=>"",
+            "tol"=>"(optional) solver tolerance")))
+Returns:
+- sol
+- normF
+- lb
+- ub
+- AA
+- sol_real
+- normF_real
+- normF1
+- sol_all
+- normF_abs
+- Qyes
+"""
 
-# Purpose: 	Calculation of the solution with j sources
-#			Minimizes the function: ∑ᵢ(MixFn[i]- ∑ⱼ(Sources[i,j]))²
-#
-# Input:
-#	number_of_sources - Number of sources
-#	nd 	 - Number of detectors
-#	Nsim - Number of simulations
-#	aa	 - Multiple for initial random conditions
-#	xD	 - Detector positions
-#	t0	 - Initial time of sources
-#	time - Time vector from t_initial to t_final
-#	S	 - Observation matrix (returned from initial_conditions)
-#	numT - Number of time points
-
-# Returns:
-#
-function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT, x_true)
-	GreenNMFk.log("\nRunning NMF calculation...")
-	GreenNMFk.log("-----------------------------------------")
-
+function calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT, x_true; tol::Float64=1e-1)
 	# Number of independent variables to solve
 	nvar = 3 + number_of_sources * 3
 
@@ -61,58 +51,27 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 
 	cutNum = 5
 
-	# Define the function that will be minimized
-	# funF = ∑ᵢ(MixFn[i]- ∑ⱼ(Sources[i,j]))²
-	GreenNMFk.log("  Define the function to be minimized")
-	function create_problem(a...)
-		x = collect(a)
-		S = zeros(similar(S))
-		min_sum = zeros(numberoftimes)
-		for i=1:nd
-			for d=1:number_of_sources
-				min_sum += source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3])
-			end
-			if i == 1
-				S[i,:] += [min_sum; zeros((nd-1)*numT)]
-			else
-				S[i,:] += [zeros((i-1)*numT); min_sum; zeros((nd-i)*numT)]
-			end
-		end
-	end
-
 	function nl_func(a...)
 		x = collect(a)
-		#fun_sum = zeros(nd*numT)
+
 		fun_sum2 = 0
 		min_sum = zeros(numberoftimes)
-		# @show x[4], x[5:6], xD[i,:], x[1], x[2], t0, x[3]
-		# @show time
-		# @show source(time, x[4], x[5:6], xD[i,:], x[1], x[2], t0, x[3])
+
 		for i=1:nd
 			for d=1:number_of_sources
 				min_sum += source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3])
 			end
-			#if i == 1
-				#fun_sum = [min_sum; zeros((nd-1)*numT)] .- S[i,:]
-				#fun_sum2 += sum((min_sum .- S[i,1:i*numT]).^2)
-				#fun_sum2 += sum(S[i,i*numT+1:nd*numT].^2)
-			#else
-				#fun_sum += [zeros((i-1)*numT); min_sum; zeros((nd-i)*numT)] .- S[i,:]
 				fun_sum2 += sum((min_sum .- S[i,(i-1)*numT+1:i*numT]).^2)
 				fun_sum2 += sum(S[i,1:i*numT:(i-1)*numT].^2) + sum(S[i,i*numT+1:nd*numT].^2)
-			#end
 		end
-		#@show sum(fun_sum.^2)
-		#@show fun_sum2
+
 		return fun_sum2
 	end
 
 	function nl_func_mads(x)
 		fun_sum = zeros(nd*numT)
 		min_sum = zeros(numberoftimes)
-		# @show x[4], x[5:6], xD[i,:], x[1], x[2], t0, x[3]
-		# @show time
-		# @show source(time, x[4], x[5:6], xD[i,:], x[1], x[2], t0, x[3])
+
 		for i=1:nd
 			for d=1:number_of_sources
 				min_sum += source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3])
@@ -123,10 +82,10 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 				fun_sum += [zeros((i-1)*numT); min_sum; zeros((nd-i)*numT)] .- S[i,:]
 			end
 		end
+
 		return fun_sum
 	end
 
-	GreenNMFk.log("  Calculating simulation parameters")
 	# Defining the lower and upper boundary for the minimization
 	lb = [1e-6 1e-6 1e-6] # replace with true variable names
 	ub = [1 1 1] # replace with true variable names
@@ -150,7 +109,10 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 		SS = S[i,:].^2
 		AA = AA + sum(SS)
 	end
-	GreenNMFk.log("  -> Calculating initial guesses")
+
+	#TODO need to seperate MADS/Ipopt solvers
+	#TODO need to remove result == whatever
+	#TODO need to add clustering
 	#TODO needs to be fixed to represent actual upper/lower bound arrays
 	function rg(x::Vector{Float64}=Vector{Float64}(0))
 		if length(x) == 0
@@ -164,16 +126,8 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 		return x_init
 	end
 
-	GreenNMFk.log("  Running NMF calculations")
 	result = 0
 	while result == 0
-		#options = optimset("MaxFunEvals", 3000) # Set maximum times to evaluate function at 3000
-
-		GreenNMFk.log("  -> Running solver")
-		@show nl_func(x_true...)
-
-		#global x_true = initCON[1,:]
-		#create_problem(initCON[1,:]...)
 
 		for k = 1:Nsim
 			local solutions
@@ -182,6 +136,7 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 			max_iters = 1000 # Maximum # of iterations for solver - decreases on failure
 
 			# Try/catch NL solver
+			# Depreciated for MADS solver
 			function nl_solver(x_init)
 				# model_NMF = JuMP.Model(solver=NLopt.NLoptSolver(algorithm=:LD_MMA, maxeval=max_iters))
 				model_NMF = JuMP.Model(solver=Ipopt.IpoptSolver(print_level=0, max_iter=max_iters))
@@ -197,29 +152,22 @@ function calculations_nmf_v02(number_of_sources, nd, Nsim, aa, xD, t0, time, S, 
 				return [JuMP.getvalue(x[i]) for i=1:nvar]
 			end
 
-			# While solver fails...
-			tol = 1e-1
+			#tol = 1e-1
 			x_init = rg()
 			of = nl_func(x_init...)
-			@show x_init
-			@show x_true
+
 			solutions = x_init
+
 			while of > tol
-				GreenNMFk.log("  --> Run $(k)/$(Nsim): Initial OF $(of)")
-				# solutions = nl_solver(solutions)
-				@show ub
-				@show lb
-					solutions, r = Mads.minimize(nl_func_mads, vec(x_true); upperbounds=vec(ub), lowerbounds=vec(lb), logtransformed=vec(pl), tolX=1e-12, tolG=1e-12, tolOF=1e-3)
+				solutions, r = Mads.minimize(nl_func_mads, vec(x_true); upperbounds=vec(ub), lowerbounds=vec(lb), logtransformed=vec(pl), tolX=1e-12, tolG=1e-12, tolOF=1e-3)
 				of = r.minimum
-				@show solutions
-				GreenNMFk.log("  --> Run $(k)/$(Nsim): Optimized OF $(of)")
 				result = 1
 			end
 
 			# If solver was successful
 			if result == 1
 				sol[k,:] = solutions
-				GreenNMFk.log("\n  --> Run $(k) solutions: $(sol[k,:])")
+				#print("\n Run $(k)/$(Nsim) solutions: $(sol[k,:])")
 			end
 		end
 

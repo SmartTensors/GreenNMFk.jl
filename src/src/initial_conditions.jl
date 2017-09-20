@@ -1,15 +1,95 @@
-#---- Construction of the mixes at the detectors ----#
+"""
+Calculates observation matrix S. The observation matrix is a sparse matrix
+with a diagonal populated by mixes.
+$(DocumentFunction.documentfunction(initialize;
+argtext=Dict("x"=>"the original source constants, [Ai Xi Yi]",
+			"nd"=>"number of detectors",
+			"numT"=>"number of time points",
+			"ns"=>"number of sources",
+			"xD"=>"detector positions",
+			"t0"=>"init. time of sources",
+            "time"=>"time vector")))
+Returns:
+- observation matrix
+- vectorized observation matrix
+- normalized observation matrix
+"""
 
-# With this function, we are ordering the signals
-#  one after another in one long vector
+function initialize(x, nd, numT, ns, xD, t0, time, As)
+	S = zeros(nd, nd * numT)
+	min_sum = zeros(numT)
+	W = Array{Float64}(nd, length(As))
 
-#                        ---80---    ---80---  ---80---   --80--     --80---
-#                           1           2         3         4          5
-# The structure of S is [first mix   0,0...0,   0,0...0,  0,0...0    0,0...0]
-#                       [0, 0...0   second mix  0,0...0,  0,0...0    0,0...0]
-#                       [0, 0...0    0,0...0   third mix  0,0...0    0,0...0]
-#                       [0, 0...0    0,0...0    0,0...0, fourth mix  0,0...0]
-#                       [0, 0...0    0,0...0    0,0...0,  0,0...0  fifth mix]
+	# Populate matrix over detector count
+	for i=1:nd
+		for d=1:ns
+			min_sum += source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3])
+			W[i,d] = sum(min_sum)
+		end
+		if i == 1
+			S[i,:] += [min_sum; zeros((nd-1)*numT)]
+		else
+			S[i,:] += [zeros((i-1)*numT); min_sum; zeros((nd-i)*numT)]
+		end
+	end
+
+	# Build normalization matrix
+	Wo = W
+	for j = 2:size(W,2)
+		Wo[:,j] = W[:,j] - W[:,j-1]
+	end
+	
+	W = Wo
+	for i = 1:size(W,1)
+		W[i,:] = W[i,:] ./ sum(W[i,:])
+	end
+
+	# Condense S' and Xs' matrices into single vector
+	XF = reshape(S', 1, size(S,2) * nd) # Long vector of length nd * numT
+	
+	# Save a JLD file with initial condition variables
+	if save_output
+		outfile = "init_conditions_$(nd)_detectors.jld"
+		JLD.save(joinpath(working_dir, outfile), "XF", XF, "S", S)
+	end
+	
+	return S, XF, W
+
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Initial conditions - calculation of observation matrix
 # Input:
@@ -32,16 +112,7 @@ function initial_conditions(As::Vector, Xs::Matrix, xD::Matrix, D::Matrix, t0::N
 	nd = size(xD,1) # The number of the detectors
 	S  = Array{Float64}(nd, nd * numT) # The observation matrix S with unknown # of sources
 
-	GreenNMFk.log("\nCalculating initial conditions...",1,-1)
-	GreenNMFk.log("\nEnvironment input:",2,0)
-	GreenNMFk.log("  Sources amplitude (As)     = $(As)",1)
-	GreenNMFk.log("  Sources matrix length (Xs) = $(length(Xs))",1)
-	GreenNMFk.log("  Detector positions (xD)    = $(xD)",1)
-	GreenNMFk.log("  Diffusion coeff. (D)       = $(D) km²/year",1)
-	GreenNMFk.log("  Initial time (t0)          = $(t0)",1)
-	GreenNMFk.log("  Flow speed (u)             = $(u) km/year",1)
-	GreenNMFk.log("  Noise (noise)              = $(noise)",1)
-	GreenNMFk.log("  Number of detectors (nd)   = $(nd)",1)
+
 
 	# Iterate through number of detectors
 	for d=1:nd
@@ -82,22 +153,7 @@ function initial_conditions(As::Vector, Xs::Matrix, xD::Matrix, D::Matrix, t0::N
 end
 
 
-# Initial conditions 2 - calculation of observation matrix
-# Input:
-#	As    - Amplitudes of real sources
-#	Xs    - Sources matrix
-#	xD    - Detector positions
-#	D     - Diffusion coefficient [km^2/year]
-#	t0    - Initial time of sources
-#	u     - Flow speed [km/year]
-#	numT  - Number of time points
-#	noise - Noise strength
-#	time  - Time vector from t_initial to t_final
-#
-# Returns:
-#	S	  - Observation matrix
-#	XF	  - Observation matrix condensed to long vector
-#	W	  - Normalization matrix of Mixes
+#=
 
 function initial_conditions_2(As::Vector, Xs::Matrix, xD::Matrix, D, t0::Number, u::Number, numT::Number, noise::Number, time::Vector)
 	# Calculation of the observation matrix
@@ -108,7 +164,7 @@ function initial_conditions_2(As::Vector, Xs::Matrix, xD::Matrix, D, t0::Number,
 	local Mix
 	
 	# Below, we are ordering the signals consecutively in a single vector
-	#========= Construction of the mixes at the detectors =========#
+
 	for i = 1:nd # Loop over number of detectors (nd)
 		
 		for d = 1:length(As) # Loop over the count of sources
@@ -144,3 +200,5 @@ function initial_conditions_2(As::Vector, Xs::Matrix, xD::Matrix, D, t0::Number,
 	
 	return S, XF, W
 end
+
+=#

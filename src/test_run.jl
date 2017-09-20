@@ -1,4 +1,6 @@
-reload("GreenNMFk")
+include("GreenNMFk.jl")
+import GreenNMFk
+#reload("GreenNMFk")
 
 function compare(infile)
 	prefix = split(infile, ".")[end-1]
@@ -82,7 +84,7 @@ for k = 1:size(Xs,1)
 	x_true = [x_true..., As[k], Xn[1,k], Xn[2,k]]
 end
 
-Sold, XF = GreenNMFk.initial_conditions(As,Xs,xD,D,t0,u,numT,noise,time)
+S, XF = GreenNMFk.initial_conditions(As,Xs,xD,D,t0,u,numT,noise,time)
 
 S = GreenNMFk.create_problem(x_true, nd, numT, ns, xD, t0, time)
 

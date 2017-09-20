@@ -1,6 +1,7 @@
 # Module file for Green-NMFk
 module GreenNMFk
 
+import DocumentFunction
 import NMFk
 import Gadfly # Plotting library
 import JLD # Used for file IO
@@ -10,6 +11,7 @@ import Ipopt # Nonlinear solver
 import NLopt
 import DataFrames # Helpful in Gadfly plotting
 import Clustering # Silhouette clustering
+import Mads
 
 # IO level: 0 = no IO, 1 = some IO, 2 = verbose
 io_level = 2
@@ -75,5 +77,6 @@ include("src/comp_res.jl")
 include("src/ludmil_cluster.jl")
 include("src/clustering_the_solutions.jl")
 include("src/tests.jl")
+include("src/NMFkExecute.jl")
 
 end
