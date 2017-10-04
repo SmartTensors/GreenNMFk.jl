@@ -21,6 +21,7 @@ function initialize(x, nd, numT, ns, xD, t0, time, As)
 	W = Array{Float64}(nd, length(As))
 
 	# Populate matrix over detector count
+	#=
 	for i=1:nd
 		for d=1:ns
 			min_sum += source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3])
@@ -32,6 +33,24 @@ function initialize(x, nd, numT, ns, xD, t0, time, As)
 			S[i,:] += [zeros((i-1)*numT); min_sum; zeros((nd-i)*numT)]
 		end
 	end
+=#
+
+	# Iterate through number of detectors
+	for i=1:nd
+		for d=1:ns
+			if (d == 1)
+				min_sum = source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3]) + 0 * randn(size(time))
+				#Mix = GreenNMFk.source(time, Xs[i], Xs[i,2:3], xD[d,:], D[1], D[2], t0, u)
+			else
+				min_sum += source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3])
+				#Mix = Mix + GreenNMFk.source(time, Xs[i], Xs[i,2:3], xD[d,:], D[1], D[2], t0, u)
+			end
+			W[i,d] = sum(min_sum)
+		end
+		S[i, :] = [zeros(1, (i-1)*numT) min_sum' zeros(1, (nd-i)*numT)]
+		#S[d, :] = [zeros(1, (d-1)*numT)  Mix'  zeros(1, (nd-d)*numT)]
+	end
+
 
 	# Build normalization matrix
 	Wo = W
@@ -59,38 +78,6 @@ end
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # Initial conditions - calculation of observation matrix
 # Input:
 #	As    - Amplitudes of real sources
@@ -111,8 +98,6 @@ function initial_conditions(As::Vector, Xs::Matrix, xD::Matrix, D::Matrix, t0::N
 
 	nd = size(xD,1) # The number of the detectors
 	S  = Array{Float64}(nd, nd * numT) # The observation matrix S with unknown # of sources
-
-
 
 	# Iterate through number of detectors
 	for d=1:nd

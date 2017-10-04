@@ -47,8 +47,36 @@ function execute(Nsim::Integer, t0::Number, As::Vector, D::Array, u::Number, num
 	print("  Flow speed (u)             = $(u) km/year\n")
 	print("  Noise (noise)              = $(noise)\n")
 	print("  Number of detectors (nd)   = $(nd)\n")
-
+ 
+    Ss, XFs = GreenNMFk.initial_conditions(As,Xs,xD,D,t0,u,numT,noise,time)
     S, XF, W = GreenNMFk.initialize(x_true, nd, numT, ns, xD, t0, time, As)
+
+    println("Shape of Ss: $(size(Ss))")
+	println("Shape of S: $(size(S))")
+	println("")
+	println("Sum of Ss: $(sum(Ss))")
+	println("Sum of S: $(sum(S))")
+
+	print_with_color(:blue,"\nRow-based sum:\n--------------\n")
+	for i=1:size(Ss)[1]
+		println("i = $(i); Ss = $(sum(Ss[i,:])); S = $(sum(S[i,:]))")
+	end
+
+	print_with_color(:green,"\nColumn-based sum:\n--------------\n")
+	for i=1:size(Ss)[2]
+		println("i = $(i); Ss = $(sum(Ss[:,i])); S = $(sum(S[:,i]))")
+	end
+
+	j = 20
+	i = 9*(j-1)+1
+	println("\nS($(i):$(9+i))  = $(S[:,i:9+i])")
+	println("\nSs($(i):$(9+i)) = $(Ss[:,i:9+i])")
+
+	print_with_color(:red,"test me")
+
+    #println("Ss = $(Ss[2,:])")
+	#println("S  = $(S[2,:])")
+    #return
 
     print("\nRunning Green-NMF solver:\n")
     print("  Iterations                 = $(Nsim)\n")

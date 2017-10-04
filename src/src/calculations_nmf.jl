@@ -74,6 +74,18 @@ function calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT
 
 		for i=1:nd
 			for d=1:number_of_sources
+				if (d == 1)
+					min_sum = source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3])
+				else
+					min_sum += source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3])
+				end
+			end
+			
+			fun_sum = [zeros((i-1)*numT); min_sum; zeros((nd-i)*numT)] .- S[i,:]
+		end
+		#=
+		for i=1:nd
+			for d=1:number_of_sources
 				min_sum += source(time, x[d*3+1], x[d*3+2:d*3+3], xD[i,:], x[1], x[2], t0, x[3])
 			end
 			if i == 1
@@ -82,7 +94,7 @@ function calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT
 				fun_sum += [zeros((i-1)*numT); min_sum; zeros((nd-i)*numT)] .- S[i,:]
 			end
 		end
-
+=#
 		return fun_sum
 	end
 
@@ -159,15 +171,18 @@ function calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT
 			solutions = x_init
 
 			while of > tol
-				solutions, r = Mads.minimize(nl_func_mads, vec(x_true); upperbounds=vec(ub), lowerbounds=vec(lb), logtransformed=vec(pl), tolX=1e-12, tolG=1e-12, tolOF=1e-3)
+				#tolX=1e-12, tolG=1e-12, tolOF=1e-3
+				
+				solutions, r = Mads.minimize(nl_func_mads, vec(x_true); upperbounds=vec(ub), lowerbounds=vec(lb), logtransformed=vec(pl), tolX=1e-3, tolG=1e-3, tolOF=1e-3)
 				of = r.minimum
 				result = 1
+				println("of = $(of); tol = $(tol)")
 			end
 
 			# If solver was successful
 			if result == 1
 				sol[k,:] = solutions
-				#print("\n Run $(k)/$(Nsim) solutions: $(sol[k,:])")
+				print("\n Run $(k)/$(Nsim) solutions: $(sol[k,:])")
 			end
 		end
 
