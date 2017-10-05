@@ -2,16 +2,13 @@
 module GreenNMFk
 
 import DocumentFunction
-import NMFk
+import NMFk # Parent library
 import Gadfly # Plotting library
 import JLD # Used for file IO
 import Base # Used for system paths
-import JuMP # Used for nonlinear modeling
-import Ipopt # Nonlinear solver
-import NLopt
 import DataFrames # Helpful in Gadfly plotting
 import Clustering # Silhouette clustering
-import Mads
+import Mads # Has Levenberg–Marquardt solver
 
 # IO level: 0 = no IO, 1 = some IO, 2 = verbose
 io_level = 2
@@ -24,26 +21,6 @@ show_plots = false
 
 # Set to true to test against Matlab output
 matlab_tests = true
-
-# Logging function for debugging
-# Currently print, can be moved to file IO
-function log(instream, io_flag=2, indent=0)
-	if io_level == 2 # Verbose output
-
-		if indent == 2 # Second-tier indent
-			instream = "  --> " * instream
-		elseif indent == 1 # First tier indent
-			instream = "  -> " * instream
-		elseif indent == -1 # Header output
-			instream = "\n" * instream * "\n-----------------------------------------"
-		end
-
-		println(instream)
-
-	elseif io_level == 1 # Limited output
-		(io_flag == 1) && println(instream)
-	end
-end
 
 # Set up IO filepaths and directories
 # Procedure inspired by Mads.jl/src/MadsIO.jl
