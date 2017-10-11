@@ -1,33 +1,25 @@
-# TODO: This function needs improvement on clustering - particularily, 
-#			getting the silhouettes from NMFk.Finalize
-#
-#		• Fix silhouette clustering
-#		• Verify results are correct
 
-#=
-	Name: clustering_the_solutions
-	Purpose: 
+"""
+Purpose of function
 
-	Inputs:
-		(Int) Number of sources
-		(Int) Number of detectors
-		(Array{T,2}) NMF solution matrix
-		(Array{T,1}) NMF normF vector
-		(Int) Determine number of quantiles (flag: 1/0)
+$(DocumentFunction.documentfunction(clustering_the_solutions;
+argtext=Dict("number_of_sources"=>"",
+			""=>"",
+			""=>"",
+            ""=>"")))
+Returns:
+- 
+"""
 
-	Outputs:
-		Null
-
-=#
 function clustering_the_solutions(number_of_sources::Number, nd::Number, sol::Matrix, normF::Vector, Qyes::Number)
 	
-	GreenNMFk.log("Clustering NMFk solutions", 1, -1)
+	println("Clustering NMFk solutions")
 
 	# Define initial variables
 	local number_of_clust_sim, vect_index, sol1, cent, ind
 	local mean_savg = 0
 	minsil_old = -2
-	
+
 	# Determine the number of quantiles
 	if (Qyes == 1)
 		steps = 10
@@ -39,18 +31,17 @@ function clustering_the_solutions(number_of_sources::Number, nd::Number, sol::Ma
 	
 	# Calculation of silhouettes in different quantiles
 	for p = 1:steps	
-		GreenNMFk.log("Calculating silhouettes (quantile $(p)/$(steps))", 2, 1)
+		println("Calculating silhouettes (quantile $(p)/$(steps))")
 		
 		number_of_clust_sim = p
 		ind = find(normF[normF .<= quants[p]])
 		sol1 = sol[ind,:]
 		
-	    #xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	    #xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	    #                               1  2  3  4  5  6  7  8  9 10 11 12
-	    #Each sol for three sources = [Ux Dx Dy A1 X1 Y1 A2 X2 Y2 A3 X3 Y3]
-	    #Each sol for two sources   = [Ux Dx Dy A1 X1 Y1 A2 X2 Y2]
-	    #Each sol for one source    = [Ux Dx Dy A1 X1 Y1]
+		# Solution space for:
+	    #                   1  2  3  4  5  6  7  8  9 10 11 12
+	    # three sources = [Ux Dx Dy A1 X1 Y1 A2 X2 Y2 A3 X3 Y3]
+	    # two sources   = [Ux Dx Dy A1 X1 Y1 A2 X2 Y2]
+	    # one source    = [Ux Dx Dy A1 X1 Y1]
 		
 		just_source = sol1[:,4:end]
 		sources_3D = Array{Float64}(3, Int(size(just_source, 2)/3), size(just_source, 1))
@@ -80,7 +71,7 @@ function clustering_the_solutions(number_of_sources::Number, nd::Number, sol::Ma
 		_, vect_index, cent = ludmil_cluster(sources_3D, col_sources, 100)
 		vect_index = Array{Int64,1}(vec(vect_index))
 		
-		GreenNMFk.log("Clustering solutions",2,2)
+		println("Clustering solutions")
 		clusterassignments, centroids = NMFk.clustersolutions(col_sources', true)
 		
 		# ERROR: LoadError: BoundsError: attempt to access () at index [1]

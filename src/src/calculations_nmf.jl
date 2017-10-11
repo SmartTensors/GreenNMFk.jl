@@ -29,7 +29,7 @@ Returns:
 - Qyes
 """
 
-function calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT, x_true; tol::Float64=1e-1)
+function calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT, x_true; tol::Float64=1e-3)
 	
 	#--- Function definitions ---------------------------
 	# rg(Vector{Float64}) 
@@ -101,10 +101,11 @@ function calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT
 	normF_abs = Array{Float64}(Nsim, 1)
 
 	# Initialize arrays
-	sol_real = []
-	normF_real = []
-	normF1 = []
-	sol_all = []
+	sol_real::Array{Float64} = []
+	normF_real::Array{Float64} = []
+	normF1::Array{Float64} = []
+	sol_all::Array{Float64} = []
+	
 	local real_num = j_all = DidItGoBack = 0
 	
 	# The norm of the observational matrix / vector
@@ -156,7 +157,7 @@ function calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT
 	#--- Generate solution-dependant variables -----------------
 	# normF is defined as the squared 2-norm of the residual at x: sum(fun(x).^2)
 	for i=1:size(sol)[2]
-		normF[i] = sum(sol[:,i].^2)
+		normF[i] = float(sum(sol[:,i].^2))
 	end
 	
 	normF_abs = normF
@@ -189,7 +190,7 @@ function calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT
 		normF_real = normF1
 		Qyes = 1
 	end
-
+	println("type of normF_real = $(typeof(normF_real))")
 	# Save a JLD file with initial condition variables
 	if save_output
 		outfile = "Results_$(nd)det_$(number_of_sources)sources.jld"

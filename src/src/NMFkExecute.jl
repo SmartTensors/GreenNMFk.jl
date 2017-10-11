@@ -18,7 +18,7 @@ Returns:
 """
 
 function execute(Nsim::Integer, t0::Number, As::Vector, D::Array, u::Number, numT::Number, noise::Number, xD::Matrix, Xn::Matrix, aa=1, ns=nothing)
-    srand(2015)
+    srand(2017)
 
     time = collect(linspace(0, 20, numT))
     
@@ -69,10 +69,10 @@ function execute(Nsim::Integer, t0::Number, As::Vector, D::Array, u::Number, num
 		print("]\n")
 	end
 
-	print_with_color(:green,"\nClustering solutions:\n")
-    solution, vect_index, cent, reconstr, mean_savg, number_of_clust_sim = GreenNMFk.clustering_the_solutions(number_of_sources+1, nd, sol_real, normF_real, Qyes)
+	#print_with_color(:green,"\nClustering solutions:\n")
+    #solution, vect_index, cent, reconstr, mean_savg, number_of_clust_sim = GreenNMFk.clustering_the_solutions(number_of_sources+1, nd, sol_real, vec(normF_real), Qyes)
 
-    return S, sol, normF, sol_real
+    return S, sol, normF, sol_real, normF_real, lb, ub, Qyes
 end
 
 """
