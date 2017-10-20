@@ -9,6 +9,7 @@ import Base # Used for system paths
 import DataFrames # Helpful in Gadfly plotting
 import Clustering # Silhouette clustering
 import Mads # Has Levenberg–Marquardt solver
+import Distributions
 
 # IO level: 0 = no IO, 1 = some IO, 2 = verbose
 io_level = 2

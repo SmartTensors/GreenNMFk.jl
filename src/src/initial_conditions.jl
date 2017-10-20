@@ -8,7 +8,8 @@ argtext=Dict("x"=>"the original source constants, [Ai Xi Yi]",
 			"ns"=>"number of sources",
 			"xD"=>"detector positions",
 			"t0"=>"init. time of sources",
-            "time"=>"time vector")))
+			"time"=>"time vector")))
+			
 Returns:
 - observation matrix
 - vectorized observation matrix

@@ -4,22 +4,24 @@ Calculation of the solution with j sources.
 Minimizes the function sum_i((MixFn[i]) - sum_j(Sources[i,j]))**2
 
 $(DocumentFunction.documentfunction(calculations_nmf;
-argtext=Dict("number_of_sources"=>"",
-			"nd"=>"number of detectors",
-			"Nsim"=>"number of simulations to run",
-			"aa"=>"boundary condition coefficient",
-			"xD"=>"detector positions",
-			"t0"=>"initial time of sources",
-			"time"=>"time vector",
-			"S"=>"observation matrix",
-			"numT"=>"number of time points",
-			"x_true"=>"",
-            "tol"=>"(optional) solver tolerance")))
+argtext=Dict("number_of_sources"=>"Number of sources",
+			"nd"=>"Number of detectors",
+			"Nsim"=>"Number of simulations to run",
+			"aa"=>"Boundary condition coefficient",
+			"xD"=>"Detector positions",
+			"t0"=>"Initial time of sources",
+			"time"=>"Time vector",
+			"S"=>"Observation matrix",
+			"numT"=>"Number of time points",
+			"x_true"=>"The true solutions vector"),
+keytext=Dict("x_init"=>"Initial conditions for solver (of length 3*number_of_sources+3)",
+			 "tol"=>"Solver tolerance")))
+
 Returns:
-- sol
-- normF
-- lb
-- ub
+- sol : solutions matrix
+- normF : squared 2-norm of the residual at x
+- lb : lower bounds
+- ub : upper bounds
 - AA
 - sol_real
 - normF_real
@@ -29,8 +31,10 @@ Returns:
 - Qyes
 """
 
-function calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT, x_true; tol::Float64=1e-3)
+function calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT, x_true; tol::Float64=1e-3, epsilon=0.1, x_init=nothing)
 	
+	srand()
+
 	#--- Function definitions ---------------------------
 	# rg(Vector{Float64}) 
 	# Populates a vector containing random values within [0,1]
@@ -86,7 +90,7 @@ function calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT
 
 		return fun_sum
 	end
-	
+
 	#--- Variable definitions ----------------------------
 	# Number of independent variables to solve
 	nvar = 3 + number_of_sources * 3
@@ -129,9 +133,24 @@ function calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT
 		ub = [ub 1.5 aa aa] # replace with true variable names
 		pl = [pl true false false]
 	end
-	
+
 	ub = convert(Array{Float64}, ub)
 	lb = convert(Array{Float64}, lb)
+
+	if x_init == nothing
+		x_init = similar(lb)#similar(x_true)
+		for iii = 1:size(vec(ub))[1]
+			#x_init[iii] = rand(Distributions.Uniform(lb[iii],ub[iii]))/10.0
+			tmp_val = x_true[iii]
+			x_init[iii] = rand(Distributions.Uniform(tmp_val-epsilon,tmp_val+epsilon))
+		end
+	end
+
+
+	#println("lb = $(lb)")
+	#println("ub = $(ub)")
+	#println("x_init = $(x_init)")
+	#println("x_true = $(x_true)")
 
 
 	#--- Minimization solver loop -----------------------------
@@ -139,18 +158,22 @@ function calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT
 		local solutions
 		of = Inf
 
+		if GreenNMFk.io_level > 0
+			print_with_color(:red,"\rSolving: $(k)/$(Nsim) runs..."," "^15,"\r")
+		end
+
+		#for iii = 1:size(vec(ub))[1]
+		#	x_init[iii] = rand(Distributions.Uniform(lb[iii],ub[iii]))/10.0
+		#end
+
 		# Repeat the minimization until the minimum is greater than the tolerance
 		while of > tol
-			solutions, r = Mads.minimize(nl_func_mads, vec(x_true); upperbounds=vec(ub), lowerbounds=vec(lb), logtransformed=vec(pl), tolX=1e-12, tolG=1e-12, tolOF=1e-3)
+			solutions, r = Mads.minimize(nl_func_mads, vec(x_init); upperbounds=vec(ub), lowerbounds=vec(lb), logtransformed=vec(pl), tolX=1e-6, tolG=1e-6, tolOF=1e-3)
 			of = r.minimum
 		end
 		
 		# Populate the solutions matrix with the solutions vector
 		sol[k,:] = solutions
-		
-		if GreenNMFk.io_level > 0
-			print_with_color(:red,"\rSolving: $(k)/$(Nsim) runs..."," "^15,"\r")
-		end
 	end
 
 
@@ -190,7 +213,7 @@ function calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT
 		normF_real = normF1
 		Qyes = 1
 	end
-	println("type of normF_real = $(typeof(normF_real))")
+
 	# Save a JLD file with initial condition variables
 	if save_output
 		outfile = "Results_$(nd)det_$(number_of_sources)sources.jld"

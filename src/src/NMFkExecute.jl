@@ -10,14 +10,25 @@ argtext=Dict("Nsim"=>"number of simulations",
             "numT"=>"",
             "noise"=>"noise",
             "xD"=>"detector positions",
-            "Xn"=>"",
-            "aa"=>"(optional) boundary conditions coefficient",
-            "ns"=>"(optional) number of sources")))
+            "Xn"=>""),
+keytext=Dict("aa"=>"Boundary conditions coefficient",
+			 "ns"=>"*Real* number of sources",
+			 "number_of_sources"=>"number of sources",
+			 "x_init"=>"Initial conditions for solver (of length 3*number_of_sources+3)"
+			)))
+			
 Returns:
-- 
+- S
+- sol
+- normF
+- sol_real
+- normF_real
+- lb
+- ub
+- Qyes
 """
 
-function execute(Nsim::Integer, t0::Number, As::Vector, D::Array, u::Number, numT::Number, noise::Number, xD::Matrix, Xn::Matrix, aa=1, ns=nothing)
+function execute(Nsim::Integer, t0::Number, As::Vector, D::Array, u::Number, numT::Number, noise::Number, xD::Matrix, Xn::Matrix; aa=1, ns=nothing, number_of_sources=4, x_init=nothing)
     srand(2017)
 
     time = collect(linspace(0, 20, numT))
@@ -25,7 +36,6 @@ function execute(Nsim::Integer, t0::Number, As::Vector, D::Array, u::Number, num
     nd = size(xD,1)
     ns = length(As)
     if ns==nothing ns = length(As) end # 'Real' number of sources
-    number_of_sources = ns
 
     Xs = Array{Float64}(length(As),3)
     for k = 1:size(Xs,1)
@@ -35,7 +45,7 @@ function execute(Nsim::Integer, t0::Number, As::Vector, D::Array, u::Number, num
     x_true = [D[1], D[2], u]
     for k = 1:size(Xs,1)
         x_true = [x_true..., As[k], Xn[1,k], Xn[2,k]]
-    end
+	end
     
 	if GreenNMFk.io_level > 0
 		print_with_color(:green,"\nParameter space:\n")
@@ -59,26 +69,19 @@ function execute(Nsim::Integer, t0::Number, As::Vector, D::Array, u::Number, num
 		print("\nInitializing...")
 	end
 	
-    sol, normF, lb, ub, AA, sol_real, normF_real, normF1, sol_all, normF_abs, Qyes = GreenNMFk.calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT, x_true)
+    sol, normF, lb, ub, AA, sol_real, normF_real, normF1, sol_all, normF_abs, Qyes = GreenNMFk.calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT, x_true, x_init=x_init)
    
-   	if GreenNMFk.io_level > 0
-		print("\nMean solution = \n  [ ")
-		for i=1:size(sol)[2]
-        	print("$(round(mean(sol[:,i]),5)) ")
-		end
-		print("]\n")
-	end
-
 	#print_with_color(:green,"\nClustering solutions:\n")
     #solution, vect_index, cent, reconstr, mean_savg, number_of_clust_sim = GreenNMFk.clustering_the_solutions(number_of_sources+1, nd, sol_real, vec(normF_real), Qyes)
 
     return S, sol, normF, sol_real, normF_real, lb, ub, Qyes
 end
 
-"""
-Test Green-NMFk algorithm against verified solutions
 
-$(DocumentFunction.documentfunction(test))
+"""
+Performs unit testing on Green-NMFk functions and solver integrity
+	
+	$(DocumentFunction.documentfunction(test))
 """
 
 function test()
