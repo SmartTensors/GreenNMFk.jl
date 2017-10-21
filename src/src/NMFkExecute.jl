@@ -32,7 +32,8 @@ function execute(Nsim::Integer, t0::Number, As::Vector, D::Array, u::Number, num
     srand(2017)
 
     time = collect(linspace(0, 20, numT))
-    
+	solver_tol = 1e-3
+	
     nd = size(xD,1)
     ns = length(As)
     if ns==nothing ns = length(As) end # 'Real' number of sources
@@ -66,13 +67,17 @@ function execute(Nsim::Integer, t0::Number, As::Vector, D::Array, u::Number, num
 		print("  Iterations                 = $(Nsim)\n")
 		print("  Sources                    = $(number_of_sources)\n")
 		print("  Detectors                  = $(nd)\n")
+		print("  Tolerance                  = $(solver_tol)\n")
 		print("\nInitializing...")
 	end
 	
-    sol, normF, lb, ub, AA, sol_real, normF_real, normF1, sol_all, normF_abs, Qyes = GreenNMFk.calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT, x_true, x_init=x_init)
+    sol, normF, lb, ub, AA, sol_real, normF_real, normF1, sol_all, normF_abs, Qyes = GreenNMFk.calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT, x_true, x_init=x_init, tol=solver_tol)
    
-	#print_with_color(:green,"\nClustering solutions:\n")
-    #solution, vect_index, cent, reconstr, mean_savg, number_of_clust_sim = GreenNMFk.clustering_the_solutions(number_of_sources+1, nd, sol_real, vec(normF_real), Qyes)
+	print_with_color(:green,"\nClustering solutions:\n")
+    solution, vect_index, cent, reconstr, mean_savg, number_of_clust_sim = GreenNMFk.clustering_the_solutions(number_of_sources+1, nd, sol_real, vec(normF_real), Qyes)
+
+	print_with_color(:green,"\nCompRes:\n")
+	Sf, Comp, Dr, Det, Wf = GreenNMFk.comp_res(cent, xD, solution, t0, numT, noise, S)
 
     return S, sol, normF, sol_real, normF_real, lb, ub, Qyes
 end

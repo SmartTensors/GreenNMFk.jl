@@ -3,7 +3,7 @@ import GreenNMFk
 import Base.Test
 
 # Setting this false runs a larger (but much longer!) test suite
-simple_tests = false
+simple_tests = true
 
 # Epsilon for calculated vs. actual solution values
 sol_tolerance = 1e-3
@@ -48,14 +48,15 @@ x_init = [0.00990707 0.0819074 0.109797 0.410209 -0.200658 -0.429437 0.532161 0.
 S, sol, normF, sol_real, normF_real, lb, ub, Qyes = GreenNMFk.execute(Nsim, t0, As, D, u, numT, noise, xD, Xn, number_of_sources=nsources, x_init=x_init)
 
 @Base.Test.testset "Green-NMFk" begin
-	#@Base.Test.test isapprox(sum(S),231.992505, atol=1e-5)
-	#@Base.Test.test isapprox(mean(normF),16.15177,atol=1e-5)
-	#@Base.Test.test isapprox(mean(sol_real),0.132844,atol=1e-4)
+	@Base.Test.test isapprox(sum(S),231.9925, atol=1e-3)
+	#@Base.Test.test isapprox(sum(normF),551.0656,atol=1e-5)
+	#@Base.Test.test isapprox(sum(sol_real),2.0759e3,atol=100)
 
 	@Base.Test.test lb == [1e-6 1e-6 1e-6 1e-6 -1.0 -1.0 1e-6 -1.0 -1.0]
 	@Base.Test.test ub == [1.0 1.0 1.0 1.5 1.0 1.0 1.5 1.0 1.0]
 
-	true_sol = [0.00548 0.01408 0.04827 1.22777 -0.34733 -0.44911 0.79602 0.50358 -0.42129]
+	# Julia solution = [0.00548 0.01408 0.04827 1.22777 -0.34733 -0.44911 0.79602 0.50358 -0.42129]
+	true_sol = [0.0054 0.0019 0.0522 0.8902 -0.2413 -0.3211 1.2067 -0.2580 0.7398] # From Matlab
 	@Base.Test.test columnwise_approx(sol,true_sol,sol_tolerance) == true
 
 	# This portion of the test runs more complicated tests, but they take much longer to converge
@@ -73,74 +74,3 @@ S, sol, normF, sol_real, normF_real, lb, ub, Qyes = GreenNMFk.execute(Nsim, t0, 
 		@Base.Test.test columnwise_approx(sol,true_sol,sol_tolerance) == true
 	end
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#=
-
-
-
-#----- Error in solution --------------#
-#   This code block is only present for debugging
-ML_sol = get_mat_value("Results_9det_4sources.mat","sol")
-
-avg_ML = Array{Float64}(size(sol)[2])
-avg_sol = Array{Float64}(size(sol)[2])
-
-for i=1:size(sol)[2]
-	avg_ML[i] = round(mean(ML_sol[:,i]),5)
-	avg_sol[i] = round(mean(sol[:,i]),5)
-end
-
-println("Debugging:\n","-"^40)
-println(" Column-based average of:")
-println("    Julia solution:\n    $(avg_sol)\n")
-println("    Matlab solution:\n    $(avg_ML)\n")
-println(" Delta between solutions:")
-println("    ML - Julia = $(avg_ML-avg_sol)")
-#--------------------------------------
-
-@Base.Test.testset "GreenNMFk" begin
-	@Base.Test.test isapprox(sum(S),231.992505, atol=1e-5)
-	@Base.Test.test Qyes == 0
-	@Base.Test.test isapprox(mean(normF),16.15177,atol=1e-5)
-	@Base.Test.test isapprox(mean(sol_real),0.132844,atol=1e-4)
-
-	@Base.Test.test lb == [1e-6 1e-6 1e-6 1e-6 -1 -1 1e-6 -1 -1 1e-6 -1 -1 1e-6 -1 -1]
-	@Base.Test.test ub == [1.0 1.0 1.0 1.5 1.0 1.0 1.5 1.0 1.0 1.5 1.0 1.0 1.5 1.0 1.0]
-	
-	ML_average_sol = [0.02508,0.06989,0.10817,0.93109,-0.13471,0.14874,0.96308,-0.14126,0.15853,0.95115,-0.10073,0.10416,0.98761,-0.10117,0.04129]
-	for i=1:size(sol)[2]
-		@Base.Test.test isapprox(mean(sol[:,i]),ML_average_sol[i],atol=1e-3)
-	end
-	
-	if GreenNMFk.matlab_tests == true
-		ML_S = get_mat_value("Results_9det_4sources.mat","S")
-		ML_sol = get_mat_value("Results_9det_4sources.mat","sol")
-		ML_normF = get_mat_value("Results_9det_4sources.mat","normF")
-		ML_lb = get_mat_value("Results_9det_4sources.mat","lb")
-		ML_ub = get_mat_value("Results_9det_4sources.mat","ub")
-		ML_sol_real = get_mat_value("Results_9det_4sources.mat","sol_real")
-		ML_Qyes = get_mat_value("Results_9det_4sources.mat","Qyes")
-
-		@Base.Test.test isapprox(S,ML_S,atol=1e-3)
-		@Base.Test.test isapprox(sol,ML_sol,atol=1e-3)
-		@Base.Test.test isapprox(normF,ML_normF,atol=1e-2)
-		@Base.Test.test isapprox(lb,ML_lb,atol=1e-6)
-		@Base.Test.test isapprox(ub,ML_ub,atol=1e-6)
-		@Base.Test.test isapprox(sol_real,ML_sol_real,atol=1e-3)
-		@Base.Test.test isapprox(Qyes,ML_Qyes,atol=1e-3)
-	end
-end
-=#

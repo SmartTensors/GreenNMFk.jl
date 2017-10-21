@@ -12,8 +12,6 @@ Returns:
 """
 
 function clustering_the_solutions(number_of_sources::Number, nd::Number, sol::Matrix, normF::Vector, Qyes::Number)
-	
-	println("Clustering NMFk solutions")
 
 	# Define initial variables
 	local number_of_clust_sim, vect_index, sol1, cent, ind
@@ -31,7 +29,7 @@ function clustering_the_solutions(number_of_sources::Number, nd::Number, sol::Ma
 	
 	# Calculation of silhouettes in different quantiles
 	for p = 1:steps	
-		println("Calculating silhouettes (quantile $(p)/$(steps))")
+		if GreenNMFk.io_level > 1 println("  Quantile $(p)/$(steps)...") end
 		
 		number_of_clust_sim = p
 		ind = find(normF[normF .<= quants[p]])
@@ -68,24 +66,24 @@ function clustering_the_solutions(number_of_sources::Number, nd::Number, sol::Ma
 			end
 		end
 		
+		# Ludmil clustering
+		if GreenNMFk.io_level > 1 println("    - Ludmil clustering") end
 		_, vect_index, cent = ludmil_cluster(sources_3D, col_sources, 100)
 		vect_index = Array{Int64,1}(vec(vect_index))
 		
-		println("Clustering solutions")
-		clusterassignments, centroids = NMFk.clustersolutions(col_sources', true)
-		
-		# ERROR: LoadError: BoundsError: attempt to access () at index [1]
-		#=
-		W, H, clustersilhouettes = NMFk.finalize(col_sources, vect_index, clusterassignments, true)
-		savg = grpstats(ss, vect_index)
+		# Silhouette clustering
+		if GreenNMFk.io_level > 1 println("    - Silhouette clustering") end
+		clusterassignments, centroids = NMFk.clustersolutions_old([vec(col_sources)'], true)
+		W, H, clustersilhouettes = NMFk.finalize(col_sources, [vect_index'], clusterassignments, true)
+		savg = grpstats(clustersilhouettes, vect_index)
 		minsil = savg
 		
 		if ((mean(minsil) < (minsil_old / 2)) || (size(ind, 1) < 5) || (min(minsil) > 0.95))
-			GreenNMFk.log("Broken at quantile $(p)",2,2)
+			error("Broken at quantile $(p)")
 			break
 		end
 		
-		minsil_old = mean(minsil)=#
+		minsil_old = mean(minsil)
 	end
 	
 	idx1 = (vect_index .== 1) # Boolean array, true where vect_index[i] == 1
@@ -93,23 +91,22 @@ function clustering_the_solutions(number_of_sources::Number, nd::Number, sol::Ma
 	avg_sol = [mean(sol_matrix[:,i]) for i=1:size(sol_matrix,2)]
 	
 	solution = Array{Float64}(number_of_sources,6)
-	
+
 	# Condense into single line?
 	for i = 1:number_of_sources
 		solution[i,:] = [cent[i,:] avg_sol[1:3]]
 	end
 	
 	reconstr = mean(normF[ind])
-	#mean_savg = mean(savg) <-- Figure out clustering
+	mean_savg = mean(savg)
 	
 	# Save a JLD file with function results
-#=	if save_output
+	if save_output
 		outfile = "Solution_$(nd)det_$(number_of_sources)sources.jld"
 		
-		GreenNMFk.log("Saving results to $(working_dir)/$(outfile)")
+		info("Saving results to $(working_dir)/$(outfile)")
 		JLD.save(joinpath(working_dir, outfile), "Solution", solution, "VectIndex", vect_index, "Cent", cent, "ss", ss, "savg", savg, "reconstr", reconstr, "mean_savg", mean_savg, "number_of_clust_sim", number_of_clust_sim)
 	end
-=#
 	
 	return solution, vect_index, cent, reconstr, mean_savg, number_of_clust_sim
 end

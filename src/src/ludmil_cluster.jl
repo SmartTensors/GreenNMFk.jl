@@ -1,22 +1,34 @@
 # Pairwise Cosine distance
 # 	d_st = 1 - (x_s * x_t') / sqrt((x_s * x_s') * (x_t * x_t'))
 function pdist_cosine(x, y)
-	return (1 - dot(x, y) / (norm(x) * norm(y)))
+	return (1 - dot(vec(x), vec(y)) / (norm(x) * norm(y)))
 end
 
+"""
+Ludmil Cluster
+
+$(DocumentFunction.documentfunction(ludmil_cluster;
+argtext=Dict("Sources3D"=>"",
+			"colSources"=>"",
+			"clusterRepeatMax"=>"")))
+
+Returns:
+- idx
+- idx_r
+- Center
+"""
 function ludmil_cluster(Sources3D, colSources, clusterRepeatMax)
 
 	allProcesses = Sources3D
     
     numberOfPoints = size(allProcesses, 1)
-
 	numberOfProcesses = size(allProcesses, 2)
 	globalIter =  size(allProcesses, 3)
 	centroids = allProcesses[:, :, 1]
-	idx = zeros( numberOfProcesses, globalIter)
+
+	idx = zeros(numberOfProcesses, globalIter)
 
 	for clusterIt = 1:clusterRepeatMax
-
 		for globalIterID = 1:globalIter
 
 			processesTaken = zeros(numberOfProcesses, 1)
@@ -39,13 +51,12 @@ function ludmil_cluster(Sources3D, colSources, clusterRepeatMax)
 				centroidsTaken[minCentroid] = 1
 				idx[minProcess, globalIterID] = minCentroid
 			end
-
         end
 
         #idx(:,1) = 1:numberOfProcesses;     %%%%%% HACK
-		centroids = zeros( numberOfPoints, numberOfProcesses )
-		for centroidID = 1 : numberOfProcesses
-			for globalIterID = 1 : globalIter
+		centroids = zeros(numberOfPoints, numberOfProcesses)
+		for centroidID = 1:numberOfProcesses
+			for globalIterID = 1:globalIter
 				centroids[:, centroidID] = centroids[:, centroidID] + allProcesses[:, find( idx[:, globalIterID] .== centroidID ), globalIterID]
 			end
 		end

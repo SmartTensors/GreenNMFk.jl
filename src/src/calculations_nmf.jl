@@ -146,13 +146,6 @@ function calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT
 		end
 	end
 
-
-	#println("lb = $(lb)")
-	#println("ub = $(ub)")
-	#println("x_init = $(x_init)")
-	#println("x_true = $(x_true)")
-
-
 	#--- Minimization solver loop -----------------------------
 	for k = 1:Nsim
 		local solutions
@@ -219,7 +212,7 @@ function calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT
 		outfile = "Results_$(nd)det_$(number_of_sources)sources.jld"
 		
 		if GreenNMFk.io_level > 0
-			println("Saving results to $(working_dir)/$(outfile)")
+			info("Saving results to $(working_dir)/$(outfile)")
 		end
 		
 		JLD.save(joinpath(working_dir, outfile), "sol", sol, "normF", normF, "S", S, "lb", lb, "ub", ub, "AA", AA, "sol_real", sol_real, "normF_real", normF_real, "normF_abs", normF_abs, "DidItGoBack", DidItGoBack, "Qyes", Qyes)

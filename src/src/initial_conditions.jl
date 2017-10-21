@@ -53,7 +53,7 @@ function initialize(x, nd, numT, ns, xD, t0, time, As)
 		outfile = "init_conditions_$(nd)_detectors.jld"
 		
 		if GreenNMFk.io_level > 0
-			println("Saving results to $(working_dir)/$(outfile)")
+			info("Saving results to $(working_dir)/$(outfile)")
 		end
 		
 		JLD.save(joinpath(working_dir, outfile), "XF", XF, "S", S)
