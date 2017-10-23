@@ -12,8 +12,8 @@ ready to ship.
 
 1. Clustering (from lines 71-77 in GreenClustering.jl) needs to be verified and
 bug tested. Currently will crash at `NMFk.finalize()`.  I believe this is issue
-actually starts with improperly formatted inputs to `NMFk.clustersolutions_old`
-- but the current structure of the inputs (particularily `[vec(col_sources)']`) 
+actually starts with improperly formatted inputs to `NMFk.clustersolutions_old` - but
+the current structure of the inputs (particularily `[vec(col_sources)']`) 
 are the only format that will get through the function without crashing.
 
 2. A true random sampling of `x_init` from `lb` to `ub` will often generate
