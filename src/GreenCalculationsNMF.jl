@@ -177,7 +177,7 @@ function calculations_nmf(number_of_sources, nd, Nsim, aa, xD, t0, time, S, numT
 	end
 	
 	normF_abs = normF
-	normF = sqrt(normF./AA).*100
+	normF = sqrt.(normF./AA).*100
 
 	# Find the indices of normF where the element is less than normCut
 	index_real = find(normF .< normCut)

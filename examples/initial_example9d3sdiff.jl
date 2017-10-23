@@ -1,4 +1,3 @@
-include("GreenNMFk.jl")
 import GreenNMFk
 
 #Start stopwatch timer

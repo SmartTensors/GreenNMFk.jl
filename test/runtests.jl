@@ -1,4 +1,3 @@
-include("../GreenNMFk.jl")
 import GreenNMFk
 import Base.Test
 

@@ -90,7 +90,6 @@ Performs unit testing on Green-NMFk functions and solver integrity
 """
 
 function test()
-    nmfkdir = pwd()
-    include(joinpath(nmfkdir, "test", "runtests.jl"))
+    include(joinpath(GreenNMFk.nmfkdir, "test", "runtests.jl"))
 	return nothing
 end

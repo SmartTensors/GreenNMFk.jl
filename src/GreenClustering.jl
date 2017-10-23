@@ -75,6 +75,7 @@ function clustering_the_solutions(number_of_sources::Number, nd::Number, sol::Ma
 		if GreenNMFk.io_level > 1 println("    - Silhouette clustering") end
 		clusterassignments, centroids = NMFk.clustersolutions_old([vec(col_sources)'], true)
 		W, H, clustersilhouettes = NMFk.finalize(col_sources, [vect_index'], clusterassignments, true)
+
 		savg = grpstats(clustersilhouettes, vect_index)
 		minsil = savg
 		
